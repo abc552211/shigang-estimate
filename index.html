@@ -3,271 +3,280 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>印刷業自動估價系統</title>
+  <title>印刷業自動初算系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
 <body class="bg-[#F4F1ED]">
   <div id="app" class="min-h-screen p-4 md:p-8 font-sans" v-cloak>
-    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div class="max-w-6xl mx-auto">
       
-      <div class="lg:col-span-5 space-y-6">
-        
-        <div class="bg-[#FCFBFA] p-5 rounded-2xl shadow-sm border border-[#EAE4DD]">
-          <h2 class="text-lg font-bold mb-4 flex items-center text-[#4A3F35]">
-            <svg class="w-5 h-5 mr-2 text-[#8B7E74]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            紙價與噸數基礎設定
-          </h2>
+      <div class="bg-[#EBECE7] border-l-4 border-[#7A8B76] p-4 mb-6 rounded-lg shadow-sm flex items-center">
+        <svg class="w-5 h-5 mr-3 text-[#7A8B76]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <p class="text-[#4A5D4E] font-bold text-sm md:text-base tracking-wide">
+          ※ 系統提醒：此系統僅為紙板、印刷算料初步試算，實際數值與金額請以最終確認為準。
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-5 space-y-6">
           
-          <div class="space-y-4">
-            <div class="p-3 bg-[#F9F8F6] rounded-xl border border-[#DCD3C6]">
-              <p class="text-sm font-bold text-[#5C4E43] mb-2">全紙 (788x1094)</p>
-              <div class="grid grid-cols-3 gap-2 text-xs">
-                <div>
-                  <span class="text-[#8B7E74] block mb-1">灰紙板價格</span>
-                  <input type="number" v-model.number="priceFullGray" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
-                </div>
-                <div>
-                  <span class="text-[#8B7E74] block mb-1">白紙板價格</span>
-                  <input type="number" v-model.number="priceFullWhite" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
-                </div>
-                <div>
-                  <span class="text-[#8B7E74] block mb-1">一噸張數</span>
-                  <input type="number" v-model.number="sheetsPerTonFull" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
-                </div>
-              </div>
-            </div>
-
-            <div class="p-3 bg-[#F9F8F6] rounded-xl border border-[#DCD3C6]">
-              <p class="text-sm font-bold text-[#5C4E43] mb-2">小板紙 (720x1000)</p>
-              <div class="grid grid-cols-3 gap-2 text-xs">
-                <div>
-                  <span class="text-[#8B7E74] block mb-1">灰紙板價格</span>
-                  <input type="number" v-model.number="priceSmallGray" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
-                </div>
-                <div>
-                  <span class="text-[#8B7E74] block mb-1">白紙板價格</span>
-                  <input type="number" v-model.number="priceSmallWhite" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
-                </div>
-                <div>
-                  <span class="text-[#8B7E74] block mb-1">一噸張數</span>
-                  <input type="number" v-model.number="sheetsPerTonSmall" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-[#FCFBFA] p-6 rounded-2xl shadow-sm border border-[#EAE4DD]">
-          <h2 class="text-xl font-bold mb-5 flex items-center text-[#4A3F35]">
-            <svg class="w-5 h-5 mr-2 text-[#8F7E6D]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
-            估價參數設定
-          </h2>
-
-          <div class="mb-6">
-            <label class="block text-sm font-semibold text-[#5C4E43] mb-2">訂單總數量 (組)</label>
-            <input 
-              type="number" 
-              v-model="quantity" 
-              class="w-full p-3 bg-[#F9F8F6] border border-[#DCD3C6] rounded-lg focus:ring-2 focus:ring-[#B8A18E] focus:outline-none transition-colors"
-            />
-          </div>
-
-          <div class="mb-6 p-4 bg-[#F0EBE1] rounded-xl border border-[#E2D6C8]">
-            <label class="block text-sm font-semibold text-[#5C4E43] mb-3 flex items-center">
-              <svg class="w-4 h-4 mr-1 text-[#8F7E6D]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-              紙板尺寸與材質 (厚2.0mm)
-            </label>
-            <div class="grid grid-cols-2 gap-3 mb-3">
-              <div>
-                <span class="text-xs text-[#8B7E74]">寬度 (mm)</span>
-                <input type="number" placeholder="ex: 233" v-model.number="boardW" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none focus:ring-1 focus:ring-[#B8A18E]" />
-              </div>
-              <div>
-                <span class="text-xs text-[#8B7E74]">長度 (mm)</span>
-                <input type="number" placeholder="ex: 320" v-model.number="boardH" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none focus:ring-1 focus:ring-[#B8A18E]" />
-              </div>
-            </div>
-            <select v-model="boardType" class="w-full p-2 border border-[#DCD3C6] rounded-md bg-[#FCFBFA] focus:outline-none">
-              <option value="gray">灰紙板</option>
-              <option value="white">單面白紙板</option>
-            </select>
-          </div>
-
-          <div class="mb-6 p-4 bg-[#EBECE7] rounded-xl border border-[#D3D9D1]">
-            <label class="block text-sm font-semibold text-[#4A5D4E] mb-3 flex items-center">
-              <svg class="w-4 h-4 mr-1 text-[#7A8B76]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
-              後加工選項
-            </label>
+          <div class="bg-[#FCFBFA] p-5 rounded-2xl shadow-sm border border-[#EAE4DD]">
+            <h2 class="text-lg font-bold mb-4 flex items-center text-[#4A3F35]">
+              <svg class="w-5 h-5 mr-2 text-[#8B7E74]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              紙價與噸數基礎設定
+            </h2>
             
-            <div class="space-y-3 text-sm">
-              <label class="flex items-center justify-between p-2 hover:bg-[#F4F5F2] rounded border border-transparent hover:border-[#D3D9D1] transition cursor-pointer">
-                <span class="font-medium text-[#4A5D4E]">外包紙軋型 (宸昇)</span>
-                <input type="checkbox" v-model="needOuterDie" class="w-4 h-4 text-[#7A8B76] rounded focus:ring-[#7A8B76] accent-[#7A8B76]"/>
+            <div class="space-y-4">
+              <div class="p-3 bg-[#F9F8F6] rounded-xl border border-[#DCD3C6]">
+                <p class="text-sm font-bold text-[#5C4E43] mb-2">全紙 (788x1094)</p>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span class="text-[#8B7E74] block mb-1">灰紙板價格</span>
+                    <input type="number" v-model.number="priceFullGray" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
+                  </div>
+                  <div>
+                    <span class="text-[#8B7E74] block mb-1">白紙板價格</span>
+                    <input type="number" v-model.number="priceFullWhite" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
+                  </div>
+                  <div>
+                    <span class="text-[#8B7E74] block mb-1">一噸張數</span>
+                    <input type="number" v-model.number="sheetsPerTonFull" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
+                  </div>
+                </div>
+              </div>
+
+              <div class="p-3 bg-[#F9F8F6] rounded-xl border border-[#DCD3C6]">
+                <p class="text-sm font-bold text-[#5C4E43] mb-2">小板紙 (720x1000)</p>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span class="text-[#8B7E74] block mb-1">灰紙板價格</span>
+                    <input type="number" v-model.number="priceSmallGray" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
+                  </div>
+                  <div>
+                    <span class="text-[#8B7E74] block mb-1">白紙板價格</span>
+                    <input type="number" v-model.number="priceSmallWhite" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
+                  </div>
+                  <div>
+                    <span class="text-[#8B7E74] block mb-1">一噸張數</span>
+                    <input type="number" v-model.number="sheetsPerTonSmall" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:ring-1 focus:ring-[#B8A18E] focus:outline-none"/>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-[#FCFBFA] p-6 rounded-2xl shadow-sm border border-[#EAE4DD]">
+            <h2 class="text-xl font-bold mb-5 flex items-center text-[#4A3F35]">
+              <svg class="w-5 h-5 mr-2 text-[#8F7E6D]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+              初算參數設定
+            </h2>
+
+            <div class="mb-6">
+              <label class="block text-sm font-semibold text-[#5C4E43] mb-2">訂單總數量 (組)</label>
+              <input 
+                type="number" 
+                v-model="quantity" 
+                class="w-full p-3 bg-[#F9F8F6] border border-[#DCD3C6] rounded-lg focus:ring-2 focus:ring-[#B8A18E] focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div class="mb-6 p-4 bg-[#F0EBE1] rounded-xl border border-[#E2D6C8]">
+              <label class="block text-sm font-semibold text-[#5C4E43] mb-3 flex items-center">
+                <svg class="w-4 h-4 mr-1 text-[#8F7E6D]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                紙板尺寸與材質 (厚2.0mm)
+              </label>
+              <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <span class="text-xs text-[#8B7E74]">寬度 (mm)</span>
+                  <input type="number" placeholder="ex: 233" v-model.number="boardW" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none focus:ring-1 focus:ring-[#B8A18E]" />
+                </div>
+                <div>
+                  <span class="text-xs text-[#8B7E74]">長度 (mm)</span>
+                  <input type="number" placeholder="ex: 320" v-model.number="boardH" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none focus:ring-1 focus:ring-[#B8A18E]" />
+                </div>
+              </div>
+              <select v-model="boardType" class="w-full p-2 border border-[#DCD3C6] rounded-md bg-[#FCFBFA] focus:outline-none">
+                <option value="gray">灰紙板</option>
+                <option value="white">單面白紙板</option>
+              </select>
+            </div>
+
+            <div class="mb-6 p-4 bg-[#EBECE7] rounded-xl border border-[#D3D9D1]">
+              <label class="block text-sm font-semibold text-[#4A5D4E] mb-3 flex items-center">
+                <svg class="w-4 h-4 mr-1 text-[#7A8B76]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>
+                後加工選項
               </label>
               
-              <div class="p-2 bg-[#FCFBFA] rounded border border-[#D3D9D1]">
-                <span class="font-medium text-[#4A5D4E] block mb-2">紙板軋型方式</span>
-                <select v-model="boardDieType" class="w-full p-2 border border-[#D3D9D1] rounded-md bg-[#F4F5F2] focus:outline-none">
-                  <option value="none">無</option>
-                  <option value="chengsheng">宸昇軋型</option>
-                  <option value="jiuyu">久昱代墊/軋</option>
-                </select>
-              </div>
+              <div class="space-y-3 text-sm">
+                <label class="flex items-center justify-between p-2 hover:bg-[#F4F5F2] rounded border border-transparent hover:border-[#D3D9D1] transition cursor-pointer">
+                  <span class="font-medium text-[#4A5D4E]">外包紙軋型 (宸昇)</span>
+                  <input type="checkbox" v-model="needOuterDie" class="w-4 h-4 text-[#7A8B76] rounded focus:ring-[#7A8B76] accent-[#7A8B76]"/>
+                </label>
+                
+                <div class="p-2 bg-[#FCFBFA] rounded border border-[#D3D9D1]">
+                  <span class="font-medium text-[#4A5D4E] block mb-2">紙板軋型方式</span>
+                  <select v-model="boardDieType" class="w-full p-2 border border-[#D3D9D1] rounded-md bg-[#F4F5F2] focus:outline-none">
+                    <option value="none">無</option>
+                    <option value="chengsheng">宸昇軋型</option>
+                    <option value="jiuyu">久昱代墊/軋</option>
+                  </select>
+                </div>
 
-              <label class="flex items-center justify-between p-2 hover:bg-[#F4F5F2] rounded border border-transparent hover:border-[#D3D9D1] transition cursor-pointer">
-                <span class="font-medium text-[#4A5D4E]">刨溝處理</span>
-                <input type="checkbox" v-model="needGrooving" class="w-4 h-4 text-[#7A8B76] rounded focus:ring-[#7A8B76] accent-[#7A8B76]"/>
+                <label class="flex items-center justify-between p-2 hover:bg-[#F4F5F2] rounded border border-transparent hover:border-[#D3D9D1] transition cursor-pointer">
+                  <span class="font-medium text-[#4A5D4E]">刨溝處理</span>
+                  <input type="checkbox" v-model="needGrooving" class="w-4 h-4 text-[#7A8B76] rounded focus:ring-[#7A8B76] accent-[#7A8B76]"/>
+                </label>
+
+                <label class="flex items-center justify-between p-2 hover:bg-[#F4F5F2] rounded border border-transparent hover:border-[#D3D9D1] transition cursor-pointer">
+                  <span class="font-medium text-[#4A5D4E]">燙金處理</span>
+                  <input type="checkbox" v-model="needFoil" class="w-4 h-4 text-[#7A8B76] rounded focus:ring-[#7A8B76] accent-[#7A8B76]"/>
+                </label>
+              </div>
+            </div>
+
+            <div class="p-4 bg-[#EFEAEB] rounded-xl border border-[#DED1D5]">
+               <label class="flex items-center justify-between text-sm font-semibold text-[#6B5A5F] mb-3 cursor-pointer">
+                <div class="flex items-center">
+                  <svg class="w-4 h-4 mr-1 text-[#9B7E84]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                  印刷需求
+                </div>
+                <input type="checkbox" v-model="needPrint" class="w-4 h-4 text-[#9B7E84] rounded focus:ring-[#9B7E84] accent-[#9B7E84]"/>
               </label>
-
-              <label class="flex items-center justify-between p-2 hover:bg-[#F4F5F2] rounded border border-transparent hover:border-[#D3D9D1] transition cursor-pointer">
-                <span class="font-medium text-[#4A5D4E]">燙金處理</span>
-                <input type="checkbox" v-model="needFoil" class="w-4 h-4 text-[#7A8B76] rounded focus:ring-[#7A8B76] accent-[#7A8B76]"/>
-              </label>
+              
+              <div v-if="needPrint" class="grid grid-cols-2 gap-3 mt-2">
+                <div>
+                  <span class="text-xs text-[#8B7E74]">印刷色數</span>
+                  <input type="number" v-model.number="printColors" class="w-full p-2 border border-[#DED1D5] rounded-md bg-[#FCFBFA] focus:outline-none" min="1"/>
+                </div>
+                <div>
+                  <span class="text-xs text-[#8B7E74]">拼模數 (1張印幾模)</span>
+                  <input type="number" v-model.number="printModules" class="w-full p-2 border border-[#DED1D5] rounded-md bg-[#FCFBFA] focus:outline-none" min="1"/>
+                </div>
+              </div>
             </div>
+
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 space-y-4">
+          <div class="flex justify-end">
+             <button 
+                @click="handleExportPDF"
+                class="flex items-center px-5 py-2.5 bg-[#5C4E43] text-[#F4F1ED] rounded-lg hover:bg-[#4A3F35] shadow-sm transition-all"
+              >
+                <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
+                匯出 PDF 初算單
+              </button>
           </div>
 
-          <div class="p-4 bg-[#EFEAEB] rounded-xl border border-[#DED1D5]">
-             <label class="flex items-center justify-between text-sm font-semibold text-[#6B5A5F] mb-3 cursor-pointer">
-              <div class="flex items-center">
-                <svg class="w-4 h-4 mr-1 text-[#9B7E84]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-                印刷需求
+          <div id="report-content" class="bg-[#FCFBFA] p-8 rounded-2xl shadow-sm border border-[#EAE4DD]">
+            <div class="border-b-2 border-[#5C4E43] pb-4 mb-6 flex justify-between items-end">
+              <div>
+                <h1 class="text-2xl font-black text-[#4A3F35] tracking-wider">初算明細表</h1>
+                <p class="text-[#8B7E74] text-sm mt-1">建立日期: {{ currentDate }}</p>
               </div>
-              <input type="checkbox" v-model="needPrint" class="w-4 h-4 text-[#9B7E84] rounded focus:ring-[#9B7E84] accent-[#9B7E84]"/>
-            </label>
+              <div class="text-right">
+                <p class="text-sm text-[#8B7E74]">總數量</p>
+                <p class="text-2xl font-bold text-[#4A3F35]">{{ quantity }} <span class="text-base font-normal">組</span></p>
+              </div>
+            </div>
+
+            <div class="space-y-4 mb-8">
+              <div v-if="result.board.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
+                <div>
+                  <p class="font-bold text-[#5C4E43]">紙板成本</p>
+                  <p class="text-xs text-[#8B7E74] mb-1">最佳選擇: {{ result.board.type }} / {{ result.board.desc }}</p>
+                  <p class="text-[11px] text-[#A3968C] font-mono bg-[#F0EBE1] px-1.5 py-0.5 rounded inline-block">
+                    算式: {{ result.board.formula }}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="font-semibold text-[#5C4E43]">${{ formatMoney(result.board.total) }}</p>
+                  <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(result.board.unit) }} /組</p>
+                </div>
+              </div>
+
+              <div v-if="result.outerDie.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
+                <div>
+                  <p class="font-bold text-[#5C4E43]">外包紙軋型</p>
+                  <p class="text-xs text-[#8B7E74]">宸昇軋型 (含泡棉/運費)</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-semibold text-[#5C4E43]">${{ formatMoney(result.outerDie.total) }}</p>
+                  <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(result.outerDie.unit) }} /組</p>
+                </div>
+              </div>
+
+              <div v-if="result.boardDie.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
+                <div>
+                  <p class="font-bold text-[#5C4E43]">紙板軋型</p>
+                  <p class="text-xs text-[#8B7E74]">{{ result.boardDie.desc }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-semibold text-[#5C4E43]">${{ formatMoney(result.boardDie.total) }}</p>
+                  <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(result.boardDie.unit) }} /組</p>
+                </div>
+              </div>
+
+              <div v-if="result.grooving.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
+                <div>
+                  <p class="font-bold text-[#5C4E43]">刨溝</p>
+                  <p class="text-xs text-[#8B7E74]">基本車 $2000</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-semibold text-[#5C4E43]">${{ formatMoney(result.grooving.total) }}</p>
+                  <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(result.grooving.unit) }} /組</p>
+                </div>
+              </div>
+
+              <div v-if="result.foil.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
+                <div>
+                  <p class="font-bold text-[#5C4E43]">燙金</p>
+                  <p class="text-xs text-[#8B7E74]">基本車 $2500</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-semibold text-[#5C4E43]">${{ formatMoney(result.foil.total) }}</p>
+                  <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(result.foil.unit) }} /組</p>
+                </div>
+              </div>
+
+              <div v-if="result.print.total > 0" class="flex justify-between items-center p-3 bg-[#EFEAEB] rounded-lg border border-[#DED1D5]">
+                <div>
+                  <p class="font-bold text-[#6B5A5F]">印刷</p>
+                  <p class="text-xs text-[#9B7E84]">共 {{ result.print.reams }} 令 (已無條件進位) x {{ printColors }}色</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-semibold text-[#6B5A5F]">${{ formatMoney(result.print.total) }}</p>
+                  <p class="text-xs text-[#9B7E84]">@ ${{ formatMoney(result.print.unit) }} /組</p>
+                </div>
+              </div>
+              
+              <div v-if="result.total === 0" class="text-center py-10 text-[#B8A18E] border-2 border-dashed border-[#EAE4DD] rounded-xl bg-[#FCFBFA]">
+                請在左側輸入參數以進行初算
+              </div>
+            </div>
+
+            <div class="bg-[#5C4E43] text-[#F4F1ED] rounded-xl p-6 flex justify-between items-center shadow-inner">
+              <div>
+                <p class="text-[#DCD3C6] text-sm mb-1 font-medium">初算單價 (組)</p>
+                <p class="text-3xl font-light tracking-wide"><span class="text-xl">$</span> {{ formatMoney(result.unitTotal) }}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-[#DCD3C6] text-sm mb-1 font-medium">總金額</p>
+                <p class="text-4xl font-bold tracking-wide"><span class="text-xl text-[#B8A18E]">$</span> {{ formatMoney(result.total) }}</p>
+              </div>
+            </div>
             
-            <div v-if="needPrint" class="grid grid-cols-2 gap-3 mt-2">
-              <div>
-                <span class="text-xs text-[#8B7E74]">印刷色數</span>
-                <input type="number" v-model.number="printColors" class="w-full p-2 border border-[#DED1D5] rounded-md bg-[#FCFBFA] focus:outline-none" min="1"/>
-              </div>
-              <div>
-                <span class="text-xs text-[#8B7E74]">拼模數 (1張印幾模)</span>
-                <input type="number" v-model.number="printModules" class="w-full p-2 border border-[#DED1D5] rounded-md bg-[#FCFBFA] focus:outline-none" min="1"/>
-              </div>
+            <div class="mt-8 text-center text-xs text-[#8B7E74] space-y-1">
+              <p>※ 紙板計算已自動從 全紙/小板紙 中擇優計價。</p>
+              <p>※ 數量不足基本車時，已自動採用基本費用攤算單價。</p>
             </div>
           </div>
-
         </div>
+
       </div>
-
-      <div class="lg:col-span-7 space-y-4">
-        <div class="flex justify-end">
-           <button 
-              @click="handleExportPDF"
-              class="flex items-center px-5 py-2.5 bg-[#5C4E43] text-[#F4F1ED] rounded-lg hover:bg-[#4A3F35] shadow-sm transition-all"
-            >
-              <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
-              匯出 PDF 報價單
-            </button>
-        </div>
-
-        <div id="report-content" class="bg-[#FCFBFA] p-8 rounded-2xl shadow-sm border border-[#EAE4DD]">
-          <div class="border-b-2 border-[#5C4E43] pb-4 mb-6 flex justify-between items-end">
-            <div>
-              <h1 class="text-2xl font-black text-[#4A3F35] tracking-wider">估價明細表</h1>
-              <p class="text-[#8B7E74] text-sm mt-1">建立日期: {{ currentDate }}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-sm text-[#8B7E74]">總數量</p>
-              <p class="text-2xl font-bold text-[#4A3F35]">{{ quantity }} <span class="text-base font-normal">組</span></p>
-            </div>
-          </div>
-
-          <div class="space-y-4 mb-8">
-            <div v-if="result.board.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
-              <div>
-                <p class="font-bold text-[#5C4E43]">紙板成本</p>
-                <p class="text-xs text-[#8B7E74] mb-1">最佳選擇: {{ result.board.type }} / {{ result.board.desc }}</p>
-                <p class="text-[11px] text-[#A3968C] font-mono bg-[#F0EBE1] px-1.5 py-0.5 rounded inline-block">
-                  算式: {{ result.board.formula }}
-                </p>
-              </div>
-              <div class="text-right">
-                <p class="font-semibold text-[#5C4E43]">${{ formatMoney(result.board.total) }}</p>
-                <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(result.board.unit) }} /組</p>
-              </div>
-            </div>
-
-            <div v-if="result.outerDie.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
-              <div>
-                <p class="font-bold text-[#5C4E43]">外包紙軋型</p>
-                <p class="text-xs text-[#8B7E74]">宸昇軋型 (含泡棉/運費)</p>
-              </div>
-              <div class="text-right">
-                <p class="font-semibold text-[#5C4E43]">${{ formatMoney(result.outerDie.total) }}</p>
-                <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(result.outerDie.unit) }} /組</p>
-              </div>
-            </div>
-
-            <div v-if="result.boardDie.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
-              <div>
-                <p class="font-bold text-[#5C4E43]">紙板軋型</p>
-                <p class="text-xs text-[#8B7E74]">{{ result.boardDie.desc }}</p>
-              </div>
-              <div class="text-right">
-                <p class="font-semibold text-[#5C4E43]">${{ formatMoney(result.boardDie.total) }}</p>
-                <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(result.boardDie.unit) }} /組</p>
-              </div>
-            </div>
-
-            <div v-if="result.grooving.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
-              <div>
-                <p class="font-bold text-[#5C4E43]">刨溝</p>
-                <p class="text-xs text-[#8B7E74]">基本車 $2000</p>
-              </div>
-              <div class="text-right">
-                <p class="font-semibold text-[#5C4E43]">${{ formatMoney(result.grooving.total) }}</p>
-                <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(result.grooving.unit) }} /組</p>
-              </div>
-            </div>
-
-            <div v-if="result.foil.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
-              <div>
-                <p class="font-bold text-[#5C4E43]">燙金</p>
-                <p class="text-xs text-[#8B7E74]">基本車 $2500</p>
-              </div>
-              <div class="text-right">
-                <p class="font-semibold text-[#5C4E43]">${{ formatMoney(result.foil.total) }}</p>
-                <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(result.foil.unit) }} /組</p>
-              </div>
-            </div>
-
-            <div v-if="result.print.total > 0" class="flex justify-between items-center p-3 bg-[#EFEAEB] rounded-lg border border-[#DED1D5]">
-              <div>
-                <p class="font-bold text-[#6B5A5F]">印刷</p>
-                <p class="text-xs text-[#9B7E84]">共 {{ result.print.reams }} 令 (已無條件進位) x {{ printColors }}色</p>
-              </div>
-              <div class="text-right">
-                <p class="font-semibold text-[#6B5A5F]">${{ formatMoney(result.print.total) }}</p>
-                <p class="text-xs text-[#9B7E84]">@ ${{ formatMoney(result.print.unit) }} /組</p>
-              </div>
-            </div>
-            
-            <div v-if="result.total === 0" class="text-center py-10 text-[#B8A18E] border-2 border-dashed border-[#EAE4DD] rounded-xl bg-[#FCFBFA]">
-              請在左側輸入參數以計算估價
-            </div>
-          </div>
-
-          <div class="bg-[#5C4E43] text-[#F4F1ED] rounded-xl p-6 flex justify-between items-center shadow-inner">
-            <div>
-              <p class="text-[#DCD3C6] text-sm mb-1 font-medium">估算單價 (組)</p>
-              <p class="text-3xl font-light tracking-wide"><span class="text-xl">$</span> {{ formatMoney(result.unitTotal) }}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-[#DCD3C6] text-sm mb-1 font-medium">總金額</p>
-              <p class="text-4xl font-bold tracking-wide"><span class="text-xl text-[#B8A18E]">$</span> {{ formatMoney(result.total) }}</p>
-            </div>
-          </div>
-          
-          <div class="mt-8 text-center text-xs text-[#8B7E74] space-y-1">
-            <p>※ 紙板計算已自動從 全紙/小板紙 中擇優計價。</p>
-            <p>※ 數量不足基本車時，已自動採用基本費用攤算單價。</p>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 
@@ -277,16 +286,14 @@
     createApp({
       data() {
         return {
-          // 基礎價格與張數設定
           priceFullGray: 29200,
           priceFullWhite: 33000,
           sheetsPerTonFull: 820,
           
           priceSmallGray: 27500,
           priceSmallWhite: 30150,
-          sheetsPerTonSmall: 820, // 小板紙通常比較小，理論上一噸張數會比較多，這裡讓你自由改
+          sheetsPerTonSmall: 820,
 
-          // 訂單參數
           quantity: 1000,
           boardW: '',
           boardH: '',
@@ -332,7 +339,6 @@
             const fullMods = getMods(788, 1094);
             const smallMods = getMods(720, 1000);
             
-            // 抓取畫面上設定的基礎價格與張數
             const fullPrice = this.boardType === 'gray' ? this.priceFullGray : this.priceFullWhite;
             const smallPrice = this.boardType === 'gray' ? this.priceSmallGray : this.priceSmallWhite;
             
@@ -398,7 +404,6 @@
       },
       methods: {
         formatMoney(num) {
-          // 確保如果是小數，只取到小數第二位，如果是整數就不顯示小數點
           return Number(num.toFixed(2)).toString();
         },
         handleExportPDF() {
@@ -409,7 +414,7 @@
           const element = document.getElementById('report-content');
           const opt = {
             margin:       10,
-            filename:     `報價單_${new Date().getTime()}.pdf`,
+            filename:     `初算單_${new Date().getTime()}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2 },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -421,7 +426,6 @@
   </script>
   <style>
     [v-cloak] { display: none; }
-    /* 隱藏數字輸入框的上下箭頭，讓畫面更乾淨 */
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { 
       -webkit-appearance: none; 
