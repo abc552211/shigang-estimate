@@ -102,14 +102,14 @@
               <div class="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <span class="text-xs text-[#8B7E74]">寬度 (mm)</span>
-                  <input type="number" v-model.number="boardW" class="w-full p-2 border border-[#DCD3C6] bg-white rounded-md focus:outline-none" />
+                  <input type="number" v-model.number="boardW" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none" />
                 </div>
                 <div>
                   <span class="text-xs text-[#8B7E74]">長度 (mm)</span>
-                  <input type="number" v-model.number="boardH" class="w-full p-2 border border-[#DCD3C6] bg-white rounded-md focus:outline-none" />
+                  <input type="number" v-model.number="boardH" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none" />
                 </div>
               </div>
-              <select v-model="boardType" class="w-full p-2 border border-[#DCD3C6] rounded-md bg-white focus:outline-none">
+              <select v-model="boardType" class="w-full p-2 border border-[#DCD3C6] rounded-md bg-[#FCFBFA] focus:outline-none">
                 <option value="gray">灰紙板</option>
                 <option value="white">單面白紙板</option>
               </select>
@@ -295,7 +295,7 @@
                 <div class="text-right">
                   <p class="font-semibold text-[#4A5D4E]">${{ formatMoney(mat.qty * mat.cost_price) }}</p>
                   <p class="text-xs text-[#7A8B76]">{{ mat.qty }} {{ mat.unit || '個' }} @ ${{ mat.cost_price }}</p>
-                  <button @click="removeMaterial(idx)" class="text-xs text-red-400 mt-1 hover:underline">移除</button>
+                  <button @click="removeMaterial(idx)" class="text-xs text-red-400 mt-1 hover:underline cursor-pointer">移除</button>
                 </div>
               </div>
             </div>
@@ -444,14 +444,13 @@
       methods: {
         async fetchSettings() {
           try {
-            // 改用 maybeSingle 避免空表報錯 406
             const { data, error } = await supabaseClient.from('app_settings').select('*').eq('id', 1).maybeSingle();
             if (error) throw error;
             if (data) {
               this.settings = data;
               this.dbConnected = true;
             } else {
-              console.warn("尚未建立 app_settings 預設資料，套用本地預設值");
+              console.warn("尚未建立 app_settings 預設資料，套用本地預設值。請點擊上方儲存設定按鈕寫入資料。");
             }
           } catch (error) {
             console.error("連線失敗:", error);
@@ -459,11 +458,14 @@
         },
         async saveSettingsToDB() {
           try {
-            const { error } = await supabaseClient.from('app_settings').update(this.settings).eq('id', 1);
+            // 改用 upsert: 如果沒有 id=1 就強制新增，有的話就更新
+            const payload = { id: 1, ...this.settings };
+            const { error } = await supabaseClient.from('app_settings').upsert(payload);
             if (error) throw error;
-            alert('基礎設定已成功更新至資料庫！');
+            alert('✅ 基礎設定已成功儲存並同步至雲端資料庫！');
+            this.dbConnected = true; // 強制變更燈號
           } catch (error) {
-            alert('儲存失敗，請確保有在 Supabase 執行 SQL 建立 app_settings 資料表。');
+            alert('儲存失敗: ' + error.message);
           }
         },
         async fetchMaterials() {
@@ -476,7 +478,6 @@
           }
         },
 
-        // --- 流水號與儲存功能 ---
         async generateEstimateNo() {
           const now = new Date();
           const yy = now.getFullYear().toString().slice(-2);
@@ -484,7 +485,6 @@
           const prefix = `T${yy}${mm}`;
 
           try {
-            // 去 estimates 表找這個月最大的號碼
             const { data, error } = await supabaseClient
               .from('estimates')
               .select('estimate_no')
@@ -502,11 +502,10 @@
             }
           } catch (e) {
             console.error("取號失敗", e);
-            this.estimateNo = `${prefix}001`; // 防備用
+            this.estimateNo = `${prefix}001`;
           }
         },
         async saveEstimateToDB() {
-          // 儲存前再抓一次最新號碼，避免多開網頁重複
           await this.generateEstimateNo(); 
           
           const payload = {
@@ -529,14 +528,12 @@
             if (error) throw error;
             alert(`✅ 儲存成功！單號為: ${this.estimateNo}`);
             
-            // 存完自動跳下一號
             this.generateEstimateNo();
           } catch (error) {
             alert('儲存失敗: ' + error.message);
           }
         },
 
-        // --- 物料與條碼 ---
         addMaterialToList() {
           if (!this.selectedMaterial) return alert('請選擇物料');
           this.addedMaterials.push({ ...this.selectedMaterial, qty: this.addMaterialQty });
