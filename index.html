@@ -16,14 +16,14 @@
       
       <div class="bg-[#EBECE7] border-l-4 border-[#7A8B76] p-4 mb-6 rounded-lg shadow-sm flex items-center justify-between">
         <div class="flex items-center">
-          <svg class="w-5 h-5 mr-3 text-[#7A8B76]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <svg class="w-5 h-5 mr-3 text-[#7A8B76]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
           <p class="text-[#4A5D4E] font-bold text-sm md:text-base tracking-wide">
             ※ 系統提醒：此系統僅為紙板、印刷及物料算料初步試算，實際數值與金額請以最終確認為準。
           </p>
         </div>
-        <div class="text-xs font-bold text-[#7A8B76] flex items-center bg-white px-2 py-1 rounded">
-          <span class="w-2 h-2 rounded-full mr-2" :class="dbConnected ? 'bg-green-500' : 'bg-red-500'"></span>
-          {{ dbConnected ? '資料庫已連線' : '資料庫連線中...' }}
+        <div class="text-xs font-bold text-[#7A8B76] flex items-center bg-white px-2 py-1 rounded shadow-sm border border-[#D3D9D1]">
+          <span class="w-2 h-2 rounded-full mr-2" :class="dbConnected ? 'bg-green-500' : 'bg-red-500 animate-pulse'"></span>
+          {{ dbConnected ? '資料庫已連線' : '資料庫連線異常/讀取中' }}
         </div>
       </div>
 
@@ -38,25 +38,25 @@
                 雲端紙價與基礎設定
               </h2>
               <button @click="saveSettingsToDB" class="px-3 py-1 bg-[#8B7E74] text-white text-xs rounded hover:bg-[#5C4E43] transition">
-                儲存至資料庫
+                儲存設定
               </button>
             </div>
             
             <div class="space-y-4">
               <div class="flex items-center space-x-3 p-3 bg-[#EFEAEB] rounded-xl border border-[#DED1D5]">
                 <span class="text-sm font-bold text-[#6B5A5F]">目前紙板厚度 (mm):</span>
-                <input type="number" step="0.1" v-model.number="settings.board_thickness" class="w-24 p-1.5 border border-[#DED1D5] rounded bg-white focus:ring-1 focus:ring-[#9B7E84] focus:outline-none"/>
+                <input type="number" step="0.1" v-model.number="settings.board_thickness" class="w-24 p-1.5 border border-[#DED1D5] rounded bg-white focus:outline-none"/>
               </div>
 
               <div class="p-3 bg-[#F9F8F6] rounded-xl border border-[#DCD3C6]">
                 <p class="text-sm font-bold text-[#5C4E43] mb-2">全紙 (788x1094)</p>
                 <div class="grid grid-cols-3 gap-2 text-xs">
                   <div>
-                    <span class="text-[#8B7E74] block mb-1">灰紙板價格</span>
+                    <span class="text-[#8B7E74] block mb-1">灰紙板</span>
                     <input type="number" v-model.number="settings.full_gray_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/>
                   </div>
                   <div>
-                    <span class="text-[#8B7E74] block mb-1">白紙板價格</span>
+                    <span class="text-[#8B7E74] block mb-1">白紙板</span>
                     <input type="number" v-model.number="settings.full_white_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/>
                   </div>
                   <div>
@@ -70,11 +70,11 @@
                 <p class="text-sm font-bold text-[#5C4E43] mb-2">小板紙 (720x1000)</p>
                 <div class="grid grid-cols-3 gap-2 text-xs">
                   <div>
-                    <span class="text-[#8B7E74] block mb-1">灰紙板價格</span>
+                    <span class="text-[#8B7E74] block mb-1">灰紙板</span>
                     <input type="number" v-model.number="settings.small_gray_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/>
                   </div>
                   <div>
-                    <span class="text-[#8B7E74] block mb-1">白紙板價格</span>
+                    <span class="text-[#8B7E74] block mb-1">白紙板</span>
                     <input type="number" v-model.number="settings.small_white_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/>
                   </div>
                   <div>
@@ -98,20 +98,18 @@
             </div>
 
             <div class="mb-6 p-4 bg-[#F0EBE1] rounded-xl border border-[#E2D6C8]">
-              <label class="block text-sm font-semibold text-[#5C4E43] mb-3 flex items-center">
-                紙板尺寸與材質 (厚 {{ settings.board_thickness }} mm)
-              </label>
+              <label class="block text-sm font-semibold text-[#5C4E43] mb-3">紙板尺寸與材質 (厚 {{ settings.board_thickness }} mm)</label>
               <div class="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <span class="text-xs text-[#8B7E74]">寬度 (mm)</span>
-                  <input type="number" v-model.number="boardW" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none" />
+                  <input type="number" v-model.number="boardW" class="w-full p-2 border border-[#DCD3C6] bg-white rounded-md focus:outline-none" />
                 </div>
                 <div>
                   <span class="text-xs text-[#8B7E74]">長度 (mm)</span>
-                  <input type="number" v-model.number="boardH" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none" />
+                  <input type="number" v-model.number="boardH" class="w-full p-2 border border-[#DCD3C6] bg-white rounded-md focus:outline-none" />
                 </div>
               </div>
-              <select v-model="boardType" class="w-full p-2 border border-[#DCD3C6] rounded-md bg-[#FCFBFA] focus:outline-none">
+              <select v-model="boardType" class="w-full p-2 border border-[#DCD3C6] rounded-md bg-white focus:outline-none">
                 <option value="gray">灰紙板</option>
                 <option value="white">單面白紙板</option>
               </select>
@@ -183,7 +181,7 @@
                   <input type="number" v-model.number="addMaterialQty" class="w-full p-2 border border-[#DCD3C6] bg-white rounded-md focus:outline-none" min="1"/>
                 </div>
                 <div class="flex items-end">
-                  <button @click="addMaterialToList" class="p-2 h-[42px] bg-[#7A8B76] text-white rounded hover:bg-[#4A5D4E] transition px-4">
+                  <button @click="addMaterialToList" class="p-2 h-[42px] bg-[#7A8B76] text-white rounded hover:bg-[#4A5D4E] transition px-4 font-bold">
                     加入清單
                   </button>
                 </div>
@@ -195,12 +193,12 @@
 
         <div class="lg:col-span-7 space-y-4">
           <div class="flex justify-end space-x-3">
-             <button @click="generateEstimateNo" class="flex items-center px-4 py-2 bg-[#DCD3C6] text-[#4A3F35] font-bold rounded-lg hover:bg-[#B8A18E] transition">
-                更新試算單號
+             <button @click="saveEstimateToDB" class="flex items-center px-4 py-2 bg-[#7A8B76] text-white font-bold rounded-lg hover:bg-[#4A5D4E] shadow-sm transition">
+                儲存初算單至資料庫
              </button>
-             <button @click="handleExportPDF" class="flex items-center px-5 py-2.5 bg-[#5C4E43] text-[#F4F1ED] rounded-lg hover:bg-[#4A3F35] shadow-sm transition-all">
+             <button @click="handleExportPDF" class="flex items-center px-4 py-2 bg-[#5C4E43] text-[#F4F1ED] font-bold rounded-lg hover:bg-[#4A3F35] shadow-sm transition-all">
                 <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
-                匯出 PDF 初算單
+                匯出 PDF
               </button>
           </div>
 
@@ -287,7 +285,7 @@
               <div v-for="(mat, idx) in addedMaterials" :key="idx" class="flex justify-between items-center p-3 bg-white rounded-lg border border-[#D3D9D1]">
                 <div class="flex items-center space-x-4">
                   <div class="bg-white p-1 border rounded">
-                    <svg class="barcode-svg" :data-value="mat.material_name" :data-text="mat.material_name"></svg>
+                    <svg class="barcode-svg" :data-value="mat.material_name"></svg>
                   </div>
                   <div>
                     <p class="font-bold text-[#4A5D4E]">{{ mat.material_name }}</p>
@@ -321,7 +319,6 @@
   </div>
 
   <script>
-    // 初始化 Supabase 客戶端
     const supabaseUrl = 'https://tfgtvtceiozvnujiiiqj.supabase.co';
     const supabaseKey = 'sb_publishable_MIbXBy5UrRMMDwcYIaaQbA_1YWEleuK';
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -333,7 +330,6 @@
         return {
           dbConnected: false,
           
-          // 從 DB 讀取的基礎設定 (預設值防止空白)
           settings: {
             board_thickness: 2.0,
             full_gray_price: 29200,
@@ -344,17 +340,14 @@
             small_sheets: 820
           },
 
-          // 物料系統
           dbMaterials: [],
           selectedMaterial: "",
           addMaterialQty: 1,
           addedMaterials: [],
           
-          // 系統單號與時間
-          estimateNo: "",
+          estimateNo: "讀取中...",
           currentDateTime: new Date().toLocaleString('zh-TW'),
 
-          // 訂單參數
           quantity: 1000,
           boardW: '',
           boardH: '',
@@ -388,7 +381,6 @@
 
           if (qty <= 0) return res;
 
-          // 1. 紙板計算 (改吃 DB 設定檔 this.settings)
           if (bw > 0 && bh > 0) {
             const getMods = (pw, ph) => Math.max(
               Math.floor(pw / bw) * Math.floor(ph / bh),
@@ -420,7 +412,6 @@
             }
           }
 
-          // 加工與印刷邏輯保持不變
           if (this.needOuterDie) res.outerDie.total = qty < 1000 ? 1650 : 1.65 * qty;
           if (this.boardDieType === 'chengsheng') res.boardDie.total = qty < 1000 ? 1650 : 1.65 * qty;
           else if (this.boardDieType === 'jiuyu') res.boardDie.total = qty < 1000 ? 1000 : 1.0 * qty;
@@ -436,8 +427,6 @@
                       (res.grooving.total||0) + (res.foil.total||0) + (res.print.total||0);
           return res;
         },
-        
-        // 加上物料後的總計
         finalTotal() {
           let matTotal = this.addedMaterials.reduce((sum, item) => sum + (item.qty * item.cost_price), 0);
           return this.result.total + matTotal;
@@ -447,43 +436,34 @@
         }
       },
       mounted() {
-        this.generateEstimateNo();
-        // 每秒更新時間
-        setInterval(() => { this.currentDateTime = new Date().toLocaleString('zh-TW'); }, 1000);
-        
-        // 載入資料庫資料
         this.fetchSettings();
         this.fetchMaterials();
+        this.generateEstimateNo();
+        setInterval(() => { this.currentDateTime = new Date().toLocaleString('zh-TW'); }, 1000);
       },
       methods: {
-        generateEstimateNo() {
-          const now = new Date();
-          const pad = (n) => n.toString().padStart(2, '0');
-          this.estimateNo = `EST-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-        },
-        
-        // --- Supabase 資料庫操作 ---
         async fetchSettings() {
           try {
-            const { data, error } = await supabaseClient.from('app_settings').select('*').eq('id', 1).single();
+            // 改用 maybeSingle 避免空表報錯 406
+            const { data, error } = await supabaseClient.from('app_settings').select('*').eq('id', 1).maybeSingle();
             if (error) throw error;
             if (data) {
               this.settings = data;
               this.dbConnected = true;
+            } else {
+              console.warn("尚未建立 app_settings 預設資料，套用本地預設值");
             }
           } catch (error) {
-            console.error("載入基礎設定失敗:", error.message);
+            console.error("連線失敗:", error);
           }
         },
         async saveSettingsToDB() {
           try {
-            const { error } = await supabaseClient.from('app_settings')
-              .update(this.settings)
-              .eq('id', 1);
+            const { error } = await supabaseClient.from('app_settings').update(this.settings).eq('id', 1);
             if (error) throw error;
-            alert('基礎設定與厚度已成功寫入雲端資料庫！');
+            alert('基礎設定已成功更新至資料庫！');
           } catch (error) {
-            alert('寫入失敗，請確認資料表 app_settings 是否建立正確。');
+            alert('儲存失敗，請確保有在 Supabase 執行 SQL 建立 app_settings 資料表。');
           }
         },
         async fetchMaterials() {
@@ -492,25 +472,76 @@
             if (error) throw error;
             this.dbMaterials = data || [];
           } catch (error) {
-            console.error("載入物料表失敗:", error.message);
+            console.error("載入物料表失敗:", error);
           }
         },
 
-        // --- 物料與條碼操作 ---
+        // --- 流水號與儲存功能 ---
+        async generateEstimateNo() {
+          const now = new Date();
+          const yy = now.getFullYear().toString().slice(-2);
+          const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+          const prefix = `T${yy}${mm}`;
+
+          try {
+            // 去 estimates 表找這個月最大的號碼
+            const { data, error } = await supabaseClient
+              .from('estimates')
+              .select('estimate_no')
+              .like('estimate_no', `${prefix}%`)
+              .order('estimate_no', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (data && data.estimate_no) {
+              const lastNum = parseInt(data.estimate_no.slice(-3));
+              const nextNum = (lastNum + 1).toString().padStart(3, '0');
+              this.estimateNo = `${prefix}${nextNum}`;
+            } else {
+              this.estimateNo = `${prefix}001`;
+            }
+          } catch (e) {
+            console.error("取號失敗", e);
+            this.estimateNo = `${prefix}001`; // 防備用
+          }
+        },
+        async saveEstimateToDB() {
+          // 儲存前再抓一次最新號碼，避免多開網頁重複
+          await this.generateEstimateNo(); 
+          
+          const payload = {
+            estimate_no: this.estimateNo,
+            quantity: this.quantity,
+            total_amount: this.finalTotal,
+            details: {
+              board: this.result.board,
+              print: this.result.print,
+              materials: this.addedMaterials,
+              params: {
+                 boardW: this.boardW, boardH: this.boardH, type: this.boardType,
+                 thickness: this.settings.board_thickness
+              }
+            }
+          };
+
+          try {
+            const { error } = await supabaseClient.from('estimates').insert(payload);
+            if (error) throw error;
+            alert(`✅ 儲存成功！單號為: ${this.estimateNo}`);
+            
+            // 存完自動跳下一號
+            this.generateEstimateNo();
+          } catch (error) {
+            alert('儲存失敗: ' + error.message);
+          }
+        },
+
+        // --- 物料與條碼 ---
         addMaterialToList() {
-          if (!this.selectedMaterial) return alert('請先選擇物料');
-          if (this.addMaterialQty <= 0) return alert('數量必須大於 0');
-          
-          this.addedMaterials.push({
-            ...this.selectedMaterial,
-            qty: this.addMaterialQty
-          });
-          
-          // 重置輸入
+          if (!this.selectedMaterial) return alert('請選擇物料');
+          this.addedMaterials.push({ ...this.selectedMaterial, qty: this.addMaterialQty });
           this.selectedMaterial = "";
           this.addMaterialQty = 1;
-          
-          // 等待 DOM 更新後渲染條碼
           this.renderBarcodes();
         },
         removeMaterial(index) {
@@ -520,18 +551,10 @@
           nextTick(() => {
             document.querySelectorAll('.barcode-svg').forEach(svg => {
               let val = svg.getAttribute('data-value');
-              // 若料號含中文，CODE128 會無法編碼，故捕捉錯誤
               try {
-                JsBarcode(svg, val, { 
-                  format: "CODE128",
-                  height: 30, 
-                  displayValue: false, // 字我們用 HTML 自己顯示了
-                  margin: 2,
-                  width: 1.5
-                });
+                JsBarcode(svg, val, { format: "CODE128", height: 30, displayValue: false, margin: 2, width: 1.5 });
               } catch (e) {
-                // 如果編碼失敗，顯示純文字代替
-                svg.outerHTML = `<div class="text-xs text-red-500 font-mono border p-1 bg-gray-50">[條碼不支援此字元: ${val}]</div>`;
+                svg.outerHTML = `<div class="text-[10px] text-gray-500 border p-1">[條碼無法渲染中文]</div>`;
               }
             });
           });
@@ -541,22 +564,18 @@
           return Number(num.toFixed(2)).toString();
         },
         handleExportPDF() {
-          if (!window.html2pdf) return alert('PDF 模組尚未載入完成...');
-          
-          // 確保條碼最新
+          if (!window.html2pdf) return alert('PDF 模組準備中...');
           this.renderBarcodes();
-
           setTimeout(() => {
             const element = document.getElementById('report-content');
-            const opt = {
-              margin:       10,
-              filename:     `初算單_${this.estimateNo}.pdf`,
-              image:        { type: 'jpeg', quality: 0.98 },
-              html2canvas:  { scale: 2 },
-              jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            window.html2pdf().set(opt).from(element).save();
-          }, 500); // 延遲半秒確保 SVG 條碼渲染完成
+            window.html2pdf().set({
+              margin: 10,
+              filename: `初算單_${this.estimateNo}.pdf`,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { scale: 2 },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(element).save();
+          }, 500);
         }
       }
     }).mount('#app');
@@ -564,9 +583,7 @@
   <style>
     [v-cloak] { display: none; }
     input[type=number]::-webkit-inner-spin-button, 
-    input[type=number]::-webkit-outer-spin-button { 
-      -webkit-appearance: none; margin: 0; 
-    }
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   </style>
 </body>
 </html>
