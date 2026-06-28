@@ -328,70 +328,74 @@
         </div>
       </div>
 
-      <!-- ================= 總表區塊 (毛利估算表明細) ================= -->
       <div v-show="activeTab === 'summary'" class="space-y-6">
         <div class="bg-moCard p-8 rounded-2xl shadow-sm border border-moBorder">
            <div class="border-b-4 border-moText pb-4 mb-6 flex justify-between items-end">
               <div>
                 <h1 class="text-3xl font-black text-moText tracking-wider">毛利估算表明細 (內部用)</h1>
               </div>
-              <div class="text-right">
-                <div class="bg-white px-2 py-1 border border-moBorder rounded inline-block mb-1"><svg class="barcode-svg" :data-value="estimateNo" data-height="25" data-width="1.2" data-fontsize="10"></svg></div>
+              <div class="text-right flex flex-col items-end gap-2">
+                <div class="bg-white px-2 py-1 border border-moBorder rounded inline-block"><svg class="barcode-svg" :data-value="estimateNo" data-height="25" data-width="1.2" data-fontsize="10"></svg></div>
+                <button @click="handleExportPDFSummary" class="px-4 py-1.5 bg-moPrimary text-white font-bold rounded hover:bg-moPrimaryHover shadow-sm text-xs transition-all no-print">
+                  🖨️ 匯出毛利估算表 PDF
+                </button>
               </div>
             </div>
 
-            <div class="flex justify-end mb-4 items-center space-x-2">
-              <span class="text-sm font-bold text-moText">紙/印預估利潤率 (%)</span>
-              <input type="number" v-model.number="profitMargin" class="w-16 p-1 text-center border border-moBorder rounded font-bold bg-moLight text-moPrimary focus:outline-none"/>
-            </div>
+            <div id="summary-report-content" class="bg-white p-2">
+              <div class="flex justify-end mb-4 items-center space-x-2 no-print">
+                <span class="text-sm font-bold text-moText">紙/印預估利潤率 (%)</span>
+                <input type="number" v-model.number="profitMargin" class="w-16 p-1 text-center border border-moBorder rounded font-bold bg-moLight text-moPrimary focus:outline-none"/>
+              </div>
 
-            <table class="w-full text-left border-collapse text-sm mb-6 shadow-sm">
-              <thead>
-                <tr class="bg-moLight text-moText">
-                  <th class="p-3 border-b border-moBorder">總成名稱與紙材規格</th>
-                  <th class="p-3 border-b border-moBorder text-center w-24">對外/投產</th>
-                  <th class="p-3 border-b border-moBorder text-right">紙印成本</th>
-                  <th class="p-3 border-b border-moBorder text-right">加工成本</th>
-                  <th class="p-3 border-b border-moBorder text-right">物料成本</th>
-                  <th class="p-3 border-b border-moBorder text-right font-bold text-moAccent">總成本</th>
-                  <th class="p-3 border-b border-moBorder text-right font-bold text-moPrimary">對外報價</th>
-                  <th class="p-3 border-b border-moBorder text-right font-bold text-green-700">單項毛利</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(asm, idx) in assemblies" :key="asm.id" class="border-b border-moBorder hover:bg-gray-50">
-                  <td class="p-3 font-bold text-moText">
-                    {{ asm.name }}
-                    <div class="text-[10px] text-gray-500 font-normal mt-1">
-                      {{asm.boardW}}x{{asm.boardH}}mm | {{asm.boardType==='gray'?'灰紙':'白紙'}} ({{asm.thickness}}mm)
-                    </div>
-                    <div class="mt-1" v-if="asm.addedMaterials.length > 0">
-                      <table class="w-full border border-gray-200 text-[10px] mt-1 bg-white">
-                        <tbody><tr v-for="mat in asm.addedMaterials" class="border-t border-gray-100"><td class="p-1 font-mono text-gray-400 w-16"><svg class="barcode-svg" :data-value="mat.material_id" data-height="15" data-width="1" data-fontsize="8"></svg></td><td class="p-1">[{{mat.remark}}] {{mat.material_name}}</td><td class="p-1 text-center font-bold">{{mat.qty}}</td></tr></tbody>
-                      </table>
-                    </div>
-                  </td>
-                  <td class="p-3 text-center text-gray-600 font-mono text-xs">{{ asm.quantity }}<br><span class="text-moAccent font-bold">/ {{ Math.ceil(asm.quantity / ((settings.yield_rate||100)/100)) }}</span></td>
-                  <td class="p-3 text-right font-mono">${{ formatMoney(allCalculations[idx].result.paperAndPrintCost) }}</td>
-                  <td class="p-3 text-right font-mono">${{ formatMoney(allCalculations[idx].result.processingCost) }}</td>
-                  <td class="p-3 text-right font-mono">${{ formatMoney(allCalculations[idx].materialTotal) }}</td>
-                  <td class="p-3 text-right font-bold text-moAccent font-mono">${{ formatMoney(allCalculations[idx].finalTotal) }}</td>
-                  <td class="p-3 text-right font-bold text-moPrimary font-mono">${{ formatMoney(allCalculations[idx].finalSellTotal) }}</td>
-                  <td class="p-3 text-right font-bold text-green-700 font-mono">
-                    ${{ formatMoney(allCalculations[idx].finalSellTotal - allCalculations[idx].finalTotal) }}<br>
-                    <span class="text-[10px] text-gray-500 font-normal">({{ allCalculations[idx].finalSellTotal > 0 ? formatMoney(((allCalculations[idx].finalSellTotal - allCalculations[idx].finalTotal) / allCalculations[idx].finalSellTotal) * 100) : 0 }}%)</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+              <table class="w-full text-left border-collapse text-sm mb-6 shadow-sm">
+                <thead>
+                  <tr class="bg-moLight text-moText">
+                    <th class="p-3 border-b border-moBorder">總成名稱與紙材規格</th>
+                    <th class="p-3 border-b border-moBorder text-center w-24">對外/投產</th>
+                    <th class="p-3 border-b border-moBorder text-right">紙印成本</th>
+                    <th class="p-3 border-b border-moBorder text-right">加工成本</th>
+                    <th class="p-3 border-b border-moBorder text-right">物料成本</th>
+                    <th class="p-3 border-b border-moBorder text-right font-bold text-moAccent">總成本</th>
+                    <th class="p-3 border-b border-moBorder text-right font-bold text-moPrimary">對外報價</th>
+                    <th class="p-3 border-b border-moBorder text-right font-bold text-green-700">單項毛利</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(asm, idx) in assemblies" :key="asm.id" class="border-b border-moBorder hover:bg-gray-50">
+                    <td class="p-3 font-bold text-moText">
+                      {{ asm.name }}
+                      <div class="text-[10px] text-gray-500 font-normal mt-1">
+                        {{asm.boardW}}x{{asm.boardH}}mm | {{asm.boardType==='gray'?'灰紙':'白紙'}} ({{asm.thickness}}mm)
+                      </div>
+                      <div class="mt-1" v-if="asm.addedMaterials.length > 0">
+                        <table class="w-full border border-gray-200 text-[10px] mt-1 bg-white">
+                          <tbody><tr v-for="mat in asm.addedMaterials" class="border-t border-gray-100"><td class="p-1 font-mono text-gray-400 w-16"><svg class="barcode-svg" :data-value="mat.material_id" data-height="15" data-width="1" data-fontsize="8"></svg></td><td class="p-1">[{{mat.remark}}] {{mat.material_name}}</td><td class="p-1 text-center font-bold">{{mat.qty}}</td></tr></tbody>
+                        </table>
+                      </div>
+                    </td>
+                    <td class="p-3 text-center text-gray-600 font-mono text-xs">{{ asm.quantity }}<br><span class="text-moAccent font-bold">/ {{ Math.ceil(asm.quantity / ((settings.yield_rate||100)/100)) }}</span></td>
+                    <td class="p-3 text-right font-mono">${{ formatMoney(allCalculations[idx].result.paperAndPrintCost) }}</td>
+                    <td class="p-3 text-right font-mono">${{ formatMoney(allCalculations[idx].result.processingCost) }}</td>
+                    <td class="p-3 text-right font-mono">${{ formatMoney(allCalculations[idx].materialTotal) }}</td>
+                    <td class="p-3 text-right font-bold text-moAccent font-mono">${{ formatMoney(allCalculations[idx].finalTotal) }}</td>
+                    <td class="p-3 text-right font-bold text-moPrimary font-mono">${{ formatMoney(allCalculations[idx].finalSellTotal) }}</td>
+                    <td class="p-3 text-right font-bold text-green-700 font-mono">
+                      ${{ formatMoney(allCalculations[idx].finalSellTotal - allCalculations[idx].finalTotal) }}<br>
+                      <span class="text-[10px] text-gray-500 font-normal">({{ allCalculations[idx].finalSellTotal > 0 ? formatMoney(((allCalculations[idx].finalSellTotal - allCalculations[idx].finalTotal) / allCalculations[idx].finalSellTotal) * 100) : 0 }}%)</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
-            <div class="flex justify-end">
-              <div class="w-full md:w-1/2 bg-moText text-white rounded-2xl p-6 shadow-md text-sm">
-                <div class="flex justify-between border-b border-gray-500 pb-2 mb-3"><span>A. 專案總成本</span><span class="font-bold font-mono tracking-wider">${{ formatMoney(grandTotalCost) }}</span></div>
-                <div class="flex justify-between border-b border-gray-500 pb-2 mb-3"><span>B. 紙/印利潤加給 ({{ profitMargin }}%)</span><span class="font-bold text-green-300 font-mono tracking-wider">+ ${{ formatMoney(grandProfitAmount) }}</span></div>
-                <div class="flex justify-between border-b border-gray-500 pb-2 mb-3"><span>C. 加工內外價差利潤</span><span class="font-bold text-green-300 font-mono tracking-wider">+ ${{ formatMoney(grandProcessingProfit) }}</span></div>
-                <div class="flex justify-between border-b border-gray-500 pb-2 mb-3"><span>D. 物料內外價差利潤</span><span class="font-bold text-green-300 font-mono tracking-wider">+ ${{ formatMoney(grandMaterialProfit) }}</span></div>
-                <div class="flex justify-between items-end mt-4"><span class="text-base font-bold tracking-wider">專案最終對外報價 (未稅)</span><span class="text-3xl font-black text-moLight tracking-widest font-mono">${{ formatMoneyInt(grandFinalQuote) }}</span></div>
+              <div class="flex justify-end">
+                <div class="w-full md:w-1/2 bg-moText text-white rounded-2xl p-6 shadow-md text-sm">
+                  <div class="flex justify-between border-b border-gray-500 pb-2 mb-3"><span>A. 專案總成本</span><span class="font-bold font-mono tracking-wider">${{ formatMoney(grandTotalCost) }}</span></div>
+                  <div class="flex justify-between border-b border-gray-500 pb-2 mb-3"><span>B. 紙/印利潤加給 ({{ profitMargin }}%)</span><span class="font-bold text-green-300 font-mono tracking-wider">+ ${{ formatMoney(grandProfitAmount) }}</span></div>
+                  <div class="flex justify-between border-b border-gray-500 pb-2 mb-3"><span>C. 加工內外價差利潤</span><span class="font-bold text-green-300 font-mono tracking-wider">+ ${{ formatMoney(grandProcessingProfit) }}</span></div>
+                  <div class="flex justify-between border-b border-gray-500 pb-2 mb-3"><span>D. 物料內外價差利潤</span><span class="font-bold text-green-300 font-mono tracking-wider">+ ${{ formatMoney(grandMaterialProfit) }}</span></div>
+                  <div class="flex justify-between items-end mt-4"><span class="text-base font-bold tracking-wider">專案最終對外報價 (未稅)</span><span class="text-3xl font-black text-moLight tracking-widest font-mono">${{ formatMoneyInt(grandFinalQuote) }}</span></div>
+                </div>
               </div>
             </div>
         </div>
@@ -888,6 +892,20 @@
             window.html2pdf().set({ margin: 0, filename: `報價單_${this.estimateNo}.pdf`, image: { type: 'jpeg', quality: 1.0 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save();
           }, 300);
         }
+        handleExportPDFSummary() {
+          if (!window.html2pdf) return alert('PDF 模組準備中...');
+          this.renderBarcodes();
+          setTimeout(() => {
+            const element = document.getElementById('summary-report-content');
+            window.html2pdf().set({
+              margin: 10,
+              filename: `毛利估算表_${this.estimateNo}.pdf`,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(element).save();
+          }, 300);
+        },
       }
     }).mount('#app');
   </script>
