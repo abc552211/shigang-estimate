@@ -3,27 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>印刷業雲端自動初算系統 - 多總成版</title>
+  <title>印刷業雲端自動初算系統 - 完整版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <style>
+    [v-cloak] { display: none; }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    /* PDF 列印斷頁設定 */
+    .print-page-break { page-break-before: always; }
+    .print-avoid-break { page-break-inside: avoid; }
+  </style>
 </head>
 <body class="bg-[#F4F1ED]">
   <div id="app" class="min-h-screen p-4 md:p-8 font-sans" v-cloak @click="closeMaterialDropdown">
     <div class="max-w-6xl mx-auto">
       
-      <div class="bg-[#EBECE7] border-l-4 border-[#7A8B76] p-4 mb-4 rounded-lg shadow-sm flex items-center justify-between">
+      <div class="bg-[#EBECE7] border-l-4 border-[#7A8B76] p-4 mb-4 rounded-lg shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex items-center">
           <svg class="w-5 h-5 mr-3 text-[#7A8B76]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-          <p class="text-[#4A5D4E] font-bold text-sm md:text-base tracking-wide">
-            ※ 系統提醒：此系統為「紙板、印刷及物料算料」初步試算，實際數值與最終報價請以確認為準。
-          </p>
+          <div>
+            <p class="text-[#4A5D4E] font-bold text-sm md:text-base tracking-wide">
+              ※ 雲端初算系統 (紙板、加工、印刷、物料)
+            </p>
+            <div class="text-xs font-bold mt-1 flex items-center" :class="dbConnected ? 'text-[#7A8B76]' : 'text-red-500'">
+              <span class="w-2 h-2 rounded-full mr-2" :class="dbConnected ? 'bg-green-500' : 'bg-red-500 animate-pulse'"></span>
+              {{ dbConnected ? '資料庫已連線' : '資料庫連線中...' }}
+            </div>
+          </div>
         </div>
-        <div class="text-xs font-bold text-[#7A8B76] flex items-center bg-white px-2 py-1 rounded shadow-sm border border-[#D3D9D1]">
-          <span class="w-2 h-2 rounded-full mr-2" :class="dbConnected ? 'bg-green-500' : 'bg-red-500 animate-pulse'"></span>
-          {{ dbConnected ? '資料庫已連線' : '資料庫連線中...' }}
+
+        <div class="flex items-center space-x-2 bg-white p-2 rounded border border-[#D3D9D1] shadow-sm">
+          <button @click="initNewOrder" class="px-3 py-1.5 bg-[#DCD3C6] text-[#4A3F35] text-sm font-bold rounded hover:bg-[#B8A18E] transition whitespace-nowrap">
+            📝 開新單
+          </button>
+          <div class="w-px h-6 bg-gray-300 mx-1"></div>
+          <input type="text" v-model="searchOrderNo" placeholder="輸入單號 (例: T2606001)" class="w-40 p-1.5 border border-[#DCD3C6] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#7A8B76]">
+          <button @click="loadEstimateFromDB" class="px-3 py-1.5 bg-[#5C4E43] text-white text-sm font-bold rounded hover:bg-[#4A3F35] transition whitespace-nowrap">
+            🔍 調閱
+          </button>
         </div>
       </div>
 
@@ -32,7 +53,8 @@
           v-for="(asm, index) in assemblies" :key="asm.id"
           @click="activeTab = index"
           @dblclick="startEditingTab(index)"
-          class="px-4 py-2 rounded-t-lg font-bold text-sm transition-colors whitespace-nowrap min-w-[100px] flex items-center justify-center group"
+          title="雙擊以修改名稱"
+          class="px-4 py-2 rounded-t-lg font-bold text-sm transition-colors whitespace-nowrap min-w-[120px] flex items-center justify-center group relative"
           :class="activeTab === index ? 'bg-[#5C4E43] text-[#F4F1ED]' : 'bg-[#EAE4DD] text-[#8B7E74] hover:bg-[#DCD3C6]'"
         >
           <input 
@@ -40,14 +62,17 @@
             v-model="asm.name" 
             @blur="editingTabIndex = -1"
             @keyup.enter="editingTabIndex = -1"
-            class="text-black px-1 rounded w-20 text-center"
+            class="text-black px-1 rounded w-24 text-center text-sm absolute z-10 top-1.5"
             autofocus
           />
-          <span v-else>{{ asm.name }}</span>
+          <span v-else class="flex items-center">
+            {{ asm.name }}
+            <svg v-if="activeTab === index" class="w-3 h-3 ml-1 opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          </span>
           
           <span v-if="assemblies.length > 1 && activeTab === index && editingTabIndex !== index" 
                 @click.stop="removeAssembly(index)" 
-                class="ml-2 w-4 h-4 bg-red-400 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-opacity">
+                class="ml-2 w-4 h-4 bg-red-400 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-opacity absolute right-2">
             ✕
           </span>
         </button>
@@ -63,7 +88,7 @@
           class="px-6 py-2 rounded-t-lg font-black text-sm transition-colors whitespace-nowrap tracking-widest"
           :class="activeTab === 'summary' ? 'bg-[#8B7E74] text-white shadow-inner' : 'bg-[#FCFBFA] text-[#8B7E74] border border-[#DCD3C6] border-b-0 hover:bg-[#F0EBE1]'"
         >
-          📈 專案總表
+          📈 專案總表匯總
         </button>
       </div>
 
@@ -74,35 +99,19 @@
           <div class="bg-[#FCFBFA] p-6 rounded-2xl shadow-sm border border-[#EAE4DD]">
             <h2 class="text-xl font-bold mb-5 flex items-center text-[#4A3F35]">
               <svg class="w-5 h-5 mr-2 text-[#8F7E6D]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-              物料添加 (支援 % 多條件模糊搜尋)
+              物料添加 (支援 % 多條件搜尋)
             </h2>
             <div class="flex flex-col space-y-3 relative">
               <div class="relative">
                 <label class="text-xs text-[#8B7E74] block mb-1">搜尋並選擇物料</label>
-                <input 
-                  type="text" 
-                  v-model="materialSearchQuery" 
-                  @focus="isMaterialDropdownOpen = true"
-                  @click.stop
-                  placeholder="輸入關鍵字 (例: 紙%A4)"
-                  class="w-full p-2 border border-[#DCD3C6] bg-white rounded-md focus:ring-1 focus:ring-[#8B7E74] focus:outline-none"
-                />
-                
-                <ul v-if="isMaterialDropdownOpen && filteredMaterials.length > 0" 
-                    class="absolute z-50 w-full mt-1 bg-white border border-[#DCD3C6] rounded-md shadow-lg max-h-60 overflow-y-auto">
-                  <li v-for="mat in filteredMaterials" :key="mat.material_id || mat.id"
-                      @click.stop="selectMaterial(mat)"
-                      class="px-3 py-2 hover:bg-[#F0EBE1] cursor-pointer border-b border-gray-100 last:border-0">
+                <input type="text" v-model="materialSearchQuery" @focus="isMaterialDropdownOpen = true" @click.stop placeholder="輸入關鍵字 (例: 紙%A4)" class="w-full p-2 border border-[#DCD3C6] bg-white rounded-md focus:ring-1 focus:ring-[#8B7E74] focus:outline-none"/>
+                <ul v-if="isMaterialDropdownOpen && filteredMaterials.length > 0" class="absolute z-50 w-full mt-1 bg-white border border-[#DCD3C6] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <li v-for="mat in filteredMaterials" :key="mat.material_id || mat.id" @click.stop="selectMaterial(mat)" class="px-3 py-2 hover:bg-[#F0EBE1] cursor-pointer border-b border-gray-100 last:border-0">
                     <div class="font-bold text-[#4A5D4E] text-sm">{{ mat.material_name }}</div>
-                    <div class="text-xs text-gray-500">
-                      ID: {{ mat.material_id || '無' }} | 庫存: {{ mat.stock_qty || 0 }} | 單價: ${{ mat.cost_price }}
-                    </div>
+                    <div class="text-xs text-gray-500">ID: {{ mat.material_id || '無' }} | 庫存: {{ mat.stock_qty || 0 }} | 單價: ${{ mat.cost_price }}</div>
                   </li>
                 </ul>
-                <div v-if="isMaterialDropdownOpen && materialSearchQuery && filteredMaterials.length === 0" 
-                     class="absolute z-50 w-full mt-1 bg-white border border-[#DCD3C6] rounded-md shadow p-3 text-center text-sm text-gray-500">
-                  找不到符合的物料
-                </div>
+                <div v-if="isMaterialDropdownOpen && materialSearchQuery && filteredMaterials.length === 0" class="absolute z-50 w-full mt-1 bg-white border border-[#DCD3C6] rounded-md shadow p-3 text-center text-sm text-gray-500">找不到符合的物料</div>
               </div>
 
               <div v-if="selectedMaterial" class="p-2 bg-[#EFEAEB] border border-[#DED1D5] rounded flex justify-between items-center text-sm">
@@ -116,9 +125,7 @@
                   <input type="number" v-model.number="addMaterialQty" class="w-full p-2 border border-[#DCD3C6] bg-white rounded-md focus:outline-none" min="1"/>
                 </div>
                 <div class="flex items-end">
-                  <button @click="addMaterialToList" class="p-2 h-[42px] bg-[#7A8B76] text-white rounded hover:bg-[#4A5D4E] transition px-4 font-bold disabled:opacity-50" :disabled="!selectedMaterial">
-                    加入清單
-                  </button>
+                  <button @click="addMaterialToList" class="p-2 h-[42px] bg-[#7A8B76] text-white rounded hover:bg-[#4A5D4E] transition px-4 font-bold disabled:opacity-50" :disabled="!selectedMaterial">加入</button>
                 </div>
               </div>
             </div>
@@ -144,36 +151,18 @@
               <div class="p-3 bg-[#F9F8F6] rounded-xl border border-[#DCD3C6]">
                 <p class="text-sm font-bold text-[#5C4E43] mb-2">全紙 (788x1094)</p>
                 <div class="grid grid-cols-3 gap-2 text-xs">
-                  <div>
-                    <span class="text-[#8B7E74] block mb-1">灰紙板價格</span>
-                    <input type="number" v-model.number="settings.full_gray_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/>
-                  </div>
-                  <div>
-                    <span class="text-[#8B7E74] block mb-1">白紙板價格</span>
-                    <input type="number" v-model.number="settings.full_white_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/>
-                  </div>
-                  <div>
-                    <span class="text-[#8B7E74] block mb-1">一噸張數</span>
-                    <input type="number" v-model.number="settings.full_sheets" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/>
-                  </div>
+                  <div><span class="text-[#8B7E74] block mb-1">灰紙板價格</span><input type="number" v-model.number="settings.full_gray_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/></div>
+                  <div><span class="text-[#8B7E74] block mb-1">白紙板價格</span><input type="number" v-model.number="settings.full_white_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/></div>
+                  <div><span class="text-[#8B7E74] block mb-1">一噸張數</span><input type="number" v-model.number="settings.full_sheets" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/></div>
                 </div>
               </div>
 
               <div class="p-3 bg-[#F9F8F6] rounded-xl border border-[#DCD3C6]">
                 <p class="text-sm font-bold text-[#5C4E43] mb-2">小板紙 (720x1000)</p>
                 <div class="grid grid-cols-3 gap-2 text-xs">
-                  <div>
-                    <span class="text-[#8B7E74] block mb-1">灰紙板價格</span>
-                    <input type="number" v-model.number="settings.small_gray_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/>
-                  </div>
-                  <div>
-                    <span class="text-[#8B7E74] block mb-1">白紙板價格</span>
-                    <input type="number" v-model.number="settings.small_white_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/>
-                  </div>
-                  <div>
-                    <span class="text-[#8B7E74] block mb-1">一噸張數</span>
-                    <input type="number" v-model.number="settings.small_sheets" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/>
-                  </div>
+                  <div><span class="text-[#8B7E74] block mb-1">灰紙板價格</span><input type="number" v-model.number="settings.small_gray_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/></div>
+                  <div><span class="text-[#8B7E74] block mb-1">白紙板價格</span><input type="number" v-model.number="settings.small_white_price" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/></div>
+                  <div><span class="text-[#8B7E74] block mb-1">一噸張數</span><input type="number" v-model.number="settings.small_sheets" class="w-full p-1.5 border border-[#DCD3C6] rounded bg-white focus:outline-none"/></div>
                 </div>
               </div>
             </div>
@@ -182,7 +171,7 @@
           <div class="bg-[#FCFBFA] p-6 rounded-2xl shadow-sm border border-[#EAE4DD]">
             <h2 class="text-xl font-bold mb-5 flex items-center text-[#4A3F35]">
               <svg class="w-5 h-5 mr-2 text-[#8F7E6D]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/></svg>
-              【{{ activeAssembly.name }}】初算參數
+              【{{ activeAssembly.name }}】 初算參數
             </h2>
 
             <div class="mb-6">
@@ -193,18 +182,11 @@
             <div class="mb-6 p-4 bg-[#F0EBE1] rounded-xl border border-[#E2D6C8]">
               <label class="block text-sm font-semibold text-[#5C4E43] mb-3">紙板尺寸與材質 (厚 {{ settings.board_thickness }} mm)</label>
               <div class="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <span class="text-xs text-[#8B7E74]">寬度 (mm)</span>
-                  <input type="number" v-model.number="activeAssembly.boardW" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none" />
-                </div>
-                <div>
-                  <span class="text-xs text-[#8B7E74]">長度 (mm)</span>
-                  <input type="number" v-model.number="activeAssembly.boardH" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none" />
-                </div>
+                <div><span class="text-xs text-[#8B7E74]">寬度 (mm)</span><input type="number" v-model.number="activeAssembly.boardW" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none" /></div>
+                <div><span class="text-xs text-[#8B7E74]">長度 (mm)</span><input type="number" v-model.number="activeAssembly.boardH" class="w-full p-2 border border-[#DCD3C6] bg-[#FCFBFA] rounded-md focus:outline-none" /></div>
               </div>
               <select v-model="activeAssembly.boardType" class="w-full p-2 border border-[#DCD3C6] rounded-md bg-[#FCFBFA] focus:outline-none">
-                <option value="gray">灰紙板</option>
-                <option value="white">單面白紙板</option>
+                <option value="gray">灰紙板</option><option value="white">單面白紙板</option>
               </select>
             </div>
 
@@ -218,9 +200,7 @@
                 <div class="p-2 bg-[#FCFBFA] rounded border border-[#D3D9D1]">
                   <span class="font-medium text-[#4A5D4E] block mb-2">紙板軋型方式</span>
                   <select v-model="activeAssembly.boardDieType" class="w-full p-2 border border-[#D3D9D1] rounded-md bg-[#F4F5F2] focus:outline-none">
-                    <option value="none">無</option>
-                    <option value="chengsheng">宸昇軋型</option>
-                    <option value="jiuyu">久昱代墊/軋</option>
+                    <option value="none">無</option><option value="chengsheng">宸昇軋型</option><option value="jiuyu">久昱代墊/軋</option>
                   </select>
                 </div>
                 <label class="flex items-center justify-between p-2 hover:bg-[#F4F5F2] rounded cursor-pointer">
@@ -240,14 +220,8 @@
                 <input type="checkbox" v-model="activeAssembly.needPrint" class="w-4 h-4 text-[#9B7E84] rounded"/>
               </label>
               <div v-if="activeAssembly.needPrint" class="grid grid-cols-2 gap-3 mt-2">
-                <div>
-                  <span class="text-xs text-[#8B7E74]">印刷色數</span>
-                  <input type="number" v-model.number="activeAssembly.printColors" class="w-full p-2 border border-[#DED1D5] rounded-md bg-[#FCFBFA]" min="1"/>
-                </div>
-                <div>
-                  <span class="text-xs text-[#8B7E74]">拼模數 (1張印幾模)</span>
-                  <input type="number" v-model.number="activeAssembly.printModules" class="w-full p-2 border border-[#DED1D5] rounded-md bg-[#FCFBFA]" min="1"/>
-                </div>
+                <div><span class="text-xs text-[#8B7E74]">印刷色數</span><input type="number" v-model.number="activeAssembly.printColors" class="w-full p-2 border border-[#DED1D5] rounded-md bg-[#FCFBFA]" min="1"/></div>
+                <div><span class="text-xs text-[#8B7E74]">拼模數 (1張印幾模)</span><input type="number" v-model.number="activeAssembly.printModules" class="w-full p-2 border border-[#DED1D5] rounded-md bg-[#FCFBFA]" min="1"/></div>
               </div>
             </div>
 
@@ -259,7 +233,7 @@
             <div class="border-b-2 border-[#5C4E43] pb-4 mb-6 flex justify-between items-end">
               <div>
                 <h1 class="text-3xl font-black text-[#4A3F35] tracking-wider mb-2">【{{ activeAssembly.name }}】成本初算</h1>
-                <p class="text-[#8B7E74] text-sm mt-2">更新時間: {{ currentDateTime }}</p>
+                <p class="text-[#8B7E74] text-sm mt-2">單號: {{ estimateNo }} | 更新時間: {{ currentDateTime }}</p>
               </div>
               <div class="text-right">
                 <p class="text-sm text-[#8B7E74]">目標產量</p>
@@ -283,55 +257,33 @@
               </div>
 
               <div v-if="activeCalcResult.outerDie.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
-                <div>
-                  <p class="font-bold text-[#5C4E43]">外包紙軋型</p>
-                  <p class="text-xs text-[#8B7E74]">宸昇軋型 (含泡棉/運費)</p>
-                </div>
-                <div class="text-right">
-                  <p class="font-semibold text-[#5C4E43]">${{ formatMoney(activeCalcResult.outerDie.total) }}</p>
-                  <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(activeCalcResult.outerDie.unit) }} /組</p>
-                </div>
+                <div><p class="font-bold text-[#5C4E43]">外包紙軋型</p><p class="text-xs text-[#8B7E74]">宸昇軋型 (含泡棉/運費)</p></div>
+                <div class="text-right"><p class="font-semibold text-[#5C4E43]">${{ formatMoney(activeCalcResult.outerDie.total) }}</p></div>
               </div>
 
               <div v-if="activeCalcResult.boardDie.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
-                <div>
-                  <p class="font-bold text-[#5C4E43]">紙板軋型</p>
-                  <p class="text-xs text-[#8B7E74]">{{ activeCalcResult.boardDie.desc }}</p>
-                </div>
-                <div class="text-right">
-                  <p class="font-semibold text-[#5C4E43]">${{ formatMoney(activeCalcResult.boardDie.total) }}</p>
-                  <p class="text-xs text-[#8B7E74]">@ ${{ formatMoney(activeCalcResult.boardDie.unit) }} /組</p>
-                </div>
+                <div><p class="font-bold text-[#5C4E43]">紙板軋型</p><p class="text-xs text-[#8B7E74]">{{ activeCalcResult.boardDie.desc }}</p></div>
+                <div class="text-right"><p class="font-semibold text-[#5C4E43]">${{ formatMoney(activeCalcResult.boardDie.total) }}</p></div>
               </div>
 
               <div v-if="activeCalcResult.grooving.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
                 <div><p class="font-bold text-[#5C4E43]">刨溝</p></div>
-                <div class="text-right">
-                  <p class="font-semibold text-[#5C4E43]">${{ formatMoney(activeCalcResult.grooving.total) }}</p>
-                </div>
+                <div class="text-right"><p class="font-semibold text-[#5C4E43]">${{ formatMoney(activeCalcResult.grooving.total) }}</p></div>
               </div>
 
               <div v-if="activeCalcResult.foil.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
                 <div><p class="font-bold text-[#5C4E43]">燙金</p></div>
-                <div class="text-right">
-                  <p class="font-semibold text-[#5C4E43]">${{ formatMoney(activeCalcResult.foil.total) }}</p>
-                </div>
+                <div class="text-right"><p class="font-semibold text-[#5C4E43]">${{ formatMoney(activeCalcResult.foil.total) }}</p></div>
               </div>
 
               <div v-if="activeCalcResult.print.total > 0" class="flex justify-between items-center p-3 bg-[#EFEAEB] rounded-lg border border-[#DED1D5]">
-                <div>
-                  <p class="font-bold text-[#6B5A5F]">印刷</p>
-                  <p class="text-xs text-[#9B7E84]">共 {{ activeCalcResult.print.reams }} 令 x {{ activeAssembly.printColors }}色</p>
-                </div>
-                <div class="text-right">
-                  <p class="font-semibold text-[#6B5A5F]">${{ formatMoney(activeCalcResult.print.total) }}</p>
-                </div>
+                <div><p class="font-bold text-[#6B5A5F]">印刷</p><p class="text-xs text-[#9B7E84]">共 {{ activeCalcResult.print.reams }} 令 x {{ activeAssembly.printColors }}色</p></div>
+                <div class="text-right"><p class="font-semibold text-[#6B5A5F]">${{ formatMoney(activeCalcResult.print.total) }}</p></div>
               </div>
             </div>
 
             <div v-if="activeAssembly.addedMaterials.length > 0" class="space-y-4 mb-8">
               <h3 class="font-bold text-lg text-[#5C4E43] border-l-4 border-[#7A8B76] pl-2 mt-6">▍ 物料成本清單</h3>
-              
               <div v-for="(mat, idx) in activeAssembly.addedMaterials" :key="idx" class="flex justify-between items-center p-3 bg-white rounded-lg border border-[#D3D9D1]">
                 <div class="flex items-center space-x-4">
                   <div class="bg-white p-1 border rounded hidden md:block">
@@ -380,13 +332,13 @@
                 儲存整份報價至雲端
              </button>
              <button @click="handleExportPDFSummary" class="flex items-center px-4 py-2 bg-[#5C4E43] text-[#F4F1ED] font-bold rounded-lg hover:bg-[#4A3F35] shadow-sm transition-all">
-                匯出總表 PDF
+                匯出總表 PDF (含細項)
              </button>
           </div>
         </div>
 
-        <div id="summary-report-content" class="bg-[#FCFBFA] p-8 rounded-2xl shadow-sm border border-[#EAE4DD]">
-           <div class="border-b-4 border-[#5C4E43] pb-4 mb-6 flex justify-between items-end">
+        <div id="summary-report-content" class="bg-white p-8 rounded-2xl shadow-sm border border-[#EAE4DD]">
+           <div class="border-b-4 border-[#5C4E43] pb-4 mb-6 flex justify-between items-end print-avoid-break">
               <div>
                 <h1 class="text-4xl font-black text-[#4A3F35] tracking-widest mb-2">專案正式初算總表</h1>
                 <p class="text-[#8B7E74] font-mono tracking-widest bg-[#EAE4DD] inline-block px-2 py-1 rounded">單號: {{ estimateNo }}</p>
@@ -394,9 +346,8 @@
               </div>
             </div>
 
-            <div class="space-y-4 mb-8">
+            <div class="space-y-4 mb-8 print-avoid-break">
               <h3 class="font-bold text-xl text-[#5C4E43] border-l-4 border-[#8B7E74] pl-2 mb-4">▍ 各總成成本摘要</h3>
-              
               <table class="w-full text-left border-collapse">
                 <thead>
                   <tr class="bg-[#EAE4DD] text-[#5C4E43] text-sm">
@@ -405,11 +356,11 @@
                     <th class="p-3 text-right">紙板與加工</th>
                     <th class="p-3 text-right">物料成本</th>
                     <th class="p-3 text-right">單項總成本</th>
-                    <th class="p-3 text-right rounded-tr-lg">單項單位成本</th>
+                    <th class="p-3 text-right rounded-tr-lg">單價 (組)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(asm, idx) in assemblies" :key="asm.id" class="border-b border-[#EAE4DD] hover:bg-[#F9F8F6]">
+                  <tr v-for="(asm, idx) in assemblies" :key="asm.id" class="border-b border-[#EAE4DD]">
                     <td class="p-3 font-bold text-[#4A5D4E]">{{ asm.name }}</td>
                     <td class="p-3 text-right text-[#8B7E74]">{{ asm.quantity }}</td>
                     <td class="p-3 text-right text-[#8B7E74]">${{ formatMoney(allCalculations[idx].result.total) }}</td>
@@ -421,8 +372,8 @@
               </table>
             </div>
 
-            <div class="flex justify-end">
-              <div class="w-1/2 bg-[#5C4E43] text-[#F4F1ED] rounded-2xl p-6 shadow-xl">
+            <div class="flex justify-end print-avoid-break">
+              <div class="w-full md:w-1/2 bg-[#5C4E43] text-[#F4F1ED] rounded-2xl p-6 shadow-md">
                 <div class="flex justify-between items-center mb-3 pb-3 border-b border-[#8B7E74]">
                   <span class="text-[#DCD3C6] font-medium">所有總成總成本</span>
                   <span class="text-xl font-bold">${{ formatMoney(grandTotalCost) }}</span>
@@ -438,9 +389,73 @@
               </div>
             </div>
             
-            <div class="mt-10 text-center text-sm text-[#8B7E74] space-y-1 opacity-70">
+            <div class="mt-6 text-center text-sm text-[#8B7E74] space-y-1 opacity-70 print-avoid-break">
               <p>※ 本報價單由雲端系統自動產生，經利潤率 {{ profitMargin }}% 計算。</p>
             </div>
+
+            <div class="mt-12 pt-8 border-t-2 border-dashed border-[#DCD3C6]">
+              <h2 class="text-2xl font-black text-[#4A3F35] mb-6 text-center tracking-widest bg-[#F9F8F6] py-2 rounded">附錄：各總成詳細規格與成本表</h2>
+              
+              <div v-for="(asm, idx) in assemblies" :key="'detail-'+asm.id" class="mb-10 print-avoid-break border border-[#EAE4DD] rounded-xl overflow-hidden shadow-sm">
+                <div class="bg-[#EAE4DD] px-5 py-3 flex justify-between items-center">
+                  <h3 class="font-bold text-lg text-[#5C4E43]">【{{ asm.name }}】</h3>
+                  <span class="text-sm text-[#8B7E74] font-bold">需求數量: {{ asm.quantity }} 組</span>
+                </div>
+                
+                <div class="p-5 bg-white">
+                  <p class="font-bold text-[#7A8B76] mb-3 border-b border-[#DCD3C6] pb-1">紙板與加工設定</p>
+                  <div class="grid grid-cols-2 gap-4 text-sm text-[#5C4E43] mb-6">
+                    <div v-if="allCalculations[idx].result.board.total > 0">
+                      <span class="text-[#8B7E74]">紙板:</span> {{ allCalculations[idx].result.board.type }} ({{ asm.boardW }}x{{ asm.boardH }}mm)
+                      <span class="block text-xs text-gray-400 mt-1">成本: ${{ formatMoney(allCalculations[idx].result.board.total) }}</span>
+                    </div>
+                    <div>
+                      <span class="text-[#8B7E74]">印刷:</span> <span v-if="asm.needPrint">{{ asm.printColors }} 色 ({{ allCalculations[idx].result.print.reams }}令) - ${{ formatMoney(allCalculations[idx].result.print.total) }}</span><span v-else>無</span>
+                    </div>
+                    <div>
+                      <span class="text-[#8B7E74]">外包軋型:</span> <span v-if="asm.needOuterDie">有 (${{ formatMoney(allCalculations[idx].result.outerDie.total) }})</span><span v-else>無</span>
+                    </div>
+                    <div>
+                      <span class="text-[#8B7E74]">紙板軋型:</span> <span v-if="asm.boardDieType !== 'none'">{{ allCalculations[idx].result.boardDie.desc }} (${{ formatMoney(allCalculations[idx].result.boardDie.total) }})</span><span v-else>無</span>
+                    </div>
+                    <div>
+                      <span class="text-[#8B7E74]">刨溝:</span> <span v-if="asm.needGrooving">有 (${{ formatMoney(allCalculations[idx].result.grooving.total) }})</span><span v-else>無</span>
+                    </div>
+                    <div>
+                      <span class="text-[#8B7E74]">燙金:</span> <span v-if="asm.needFoil">有 (${{ formatMoney(allCalculations[idx].result.foil.total) }})</span><span v-else>無</span>
+                    </div>
+                  </div>
+
+                  <p class="font-bold text-[#7A8B76] mb-3 border-b border-[#DCD3C6] pb-1">附加物料清單</p>
+                  <div v-if="asm.addedMaterials.length === 0" class="text-sm text-gray-400 italic">無附加物料</div>
+                  <table v-else class="w-full text-sm text-left mb-2">
+                    <thead class="text-[#8B7E74] border-b border-gray-100">
+                      <tr>
+                        <th class="py-1">物料名稱</th>
+                        <th class="py-1">ID/規格</th>
+                        <th class="py-1 text-right">用量</th>
+                        <th class="py-1 text-right">單價</th>
+                        <th class="py-1 text-right">小計</th>
+                      </tr>
+                    </thead>
+                    <tbody class="text-[#5C4E43]">
+                      <tr v-for="mat in asm.addedMaterials" class="border-b border-gray-50 last:border-0">
+                        <td class="py-2 font-medium">{{ mat.material_name }}</td>
+                        <td class="py-2 text-xs text-gray-500">{{ mat.material_id || '無' }}</td>
+                        <td class="py-2 text-right">{{ mat.qty }}</td>
+                        <td class="py-2 text-right">${{ mat.cost_price }}</td>
+                        <td class="py-2 text-right font-bold">${{ formatMoney(mat.qty * mat.cost_price) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  
+                  <div class="mt-4 text-right pt-2 border-t border-gray-100">
+                    <p class="text-xs text-[#8B7E74]">【{{asm.name}}】 單項合計成本: <span class="text-lg font-bold text-[#4A3F35]">${{ formatMoney(allCalculations[idx].finalTotal) }}</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
         </div>
       </div>
 
@@ -454,7 +469,6 @@
 
     const { createApp, nextTick } = Vue;
 
-    // 建立預設總成的工廠函數
     const createDefaultAssembly = (indexCount) => ({
       id: Date.now() + Math.random(),
       name: `總成 ${indexCount}`,
@@ -484,48 +498,34 @@
           
           estimateNo: "讀取中...",
           currentDateTime: new Date().toLocaleString('zh-TW'),
+          searchOrderNo: "", // 調閱用的單號
 
-          // 多總成架構
           assemblies: [createDefaultAssembly(1)],
-          activeTab: 0, // 0~n 是總成，'summary' 是總表
+          activeTab: 0, 
           editingTabIndex: -1,
-          profitMargin: 20 // 預設利潤 20%
+          profitMargin: 20 
         }
       },
       computed: {
-        // --- 模糊搜尋邏輯 ---
         filteredMaterials() {
           if (!this.materialSearchQuery.trim()) return [];
-          // 支援 % 作為 AND 條件
           const queries = this.materialSearchQuery.split('%').map(q => q.trim().toLowerCase()).filter(q => q);
-          
           return this.dbMaterials.filter(mat => {
             const textToSearch = `${mat.material_name || ''} ${mat.material_spec || ''} ${mat.material_id || mat.id || ''}`.toLowerCase();
             return queries.every(q => textToSearch.includes(q));
-          }).slice(0, 20); // 最多顯示 20 筆防卡頓
+          }).slice(0, 20);
         },
 
-        // --- 當前總成邏輯 ---
         activeAssembly() {
           if (this.activeTab === 'summary' || !this.assemblies[this.activeTab]) return this.assemblies[0];
           return this.assemblies[this.activeTab];
         },
         
-        // --- 單一總成計算核心 ---
-        activeCalcResult() {
-          return this.calculateAssembly(this.activeAssembly);
-        },
-        activeMaterialTotal() {
-          return this.activeAssembly.addedMaterials.reduce((sum, item) => sum + (item.qty * (item.cost_price || 0)), 0);
-        },
-        activeFinalTotal() {
-          return this.activeCalcResult.total + this.activeMaterialTotal;
-        },
-        activeFinalUnitTotal() {
-          return this.activeAssembly.quantity > 0 ? (this.activeFinalTotal / this.activeAssembly.quantity) : 0;
-        },
+        activeCalcResult() { return this.calculateAssembly(this.activeAssembly); },
+        activeMaterialTotal() { return this.activeAssembly.addedMaterials.reduce((sum, item) => sum + (item.qty * (item.cost_price || 0)), 0); },
+        activeFinalTotal() { return this.activeCalcResult.total + this.activeMaterialTotal; },
+        activeFinalUnitTotal() { return this.activeAssembly.quantity > 0 ? (this.activeFinalTotal / this.activeAssembly.quantity) : 0; },
 
-        // --- 總表計算邏輯 ---
         allCalculations() {
           return this.assemblies.map(asm => {
             const result = this.calculateAssembly(asm);
@@ -535,23 +535,13 @@
             return { result, materialTotal, finalTotal, finalUnitTotal };
           });
         },
-        grandTotalCost() {
-          return this.allCalculations.reduce((sum, calc) => sum + calc.finalTotal, 0);
-        },
-        grandProfitAmount() {
-          return this.grandTotalCost * (this.profitMargin / 100);
-        },
-        grandFinalQuote() {
-          return this.grandTotalCost + this.grandProfitAmount;
-        }
+        grandTotalCost() { return this.allCalculations.reduce((sum, calc) => sum + calc.finalTotal, 0); },
+        grandProfitAmount() { return this.grandTotalCost * (this.profitMargin / 100); },
+        grandFinalQuote() { return this.grandTotalCost + this.grandProfitAmount; }
       },
       watch: {
-        // 切換頁籤或新增物料時，重新渲染條碼
         activeTab() { this.renderBarcodes(); },
-        'activeAssembly.addedMaterials': {
-          handler() { this.renderBarcodes(); },
-          deep: true
-        }
+        'activeAssembly.addedMaterials': { handler() { this.renderBarcodes(); }, deep: true }
       },
       mounted() {
         this.fetchSettings();
@@ -560,7 +550,6 @@
         setInterval(() => { this.currentDateTime = new Date().toLocaleString('zh-TW'); }, 1000);
       },
       methods: {
-        // --- 頁籤管理 ---
         addAssembly() {
           this.assemblies.push(createDefaultAssembly(this.assemblies.length + 1));
           this.activeTab = this.assemblies.length - 1;
@@ -572,11 +561,8 @@
             if (this.activeTab >= this.assemblies.length) this.activeTab = this.assemblies.length - 1;
           }
         },
-        startEditingTab(index) {
-          this.editingTabIndex = index;
-        },
+        startEditingTab(index) { this.editingTabIndex = index; },
 
-        // --- 核心計算提煉成獨立 Method 供全域調用 ---
         calculateAssembly(asm) {
           const qty = Number(asm.quantity) || 0;
           const bw = Number(asm.boardW) || 0;
@@ -592,7 +578,6 @@
             const getMods = (pw, ph) => Math.max(Math.floor(pw / bw) * Math.floor(ph / bh), Math.floor(pw / bh) * Math.floor(ph / bw));
             const fullMods = getMods(788, 1094);
             const smallMods = getMods(720, 1000);
-            
             const fullPrice = asm.boardType === 'gray' ? this.settings.full_gray_price : this.settings.full_white_price;
             const smallPrice = asm.boardType === 'gray' ? this.settings.small_gray_price : this.settings.small_white_price;
             
@@ -637,7 +622,7 @@
             const payload = { id: 1, ...this.settings };
             const { error } = await supabaseClient.from('app_settings').upsert(payload);
             if (error) throw error;
-            alert('✅ 基礎設定已成功儲存並同步至雲端資料庫！');
+            alert('✅ 基礎設定已成功儲存！');
             this.dbConnected = true;
           } catch (error) { alert('儲存失敗: ' + error.message); }
         },
@@ -647,6 +632,15 @@
             if (error) throw error;
             this.dbMaterials = data || [];
           } catch (error) { console.error("載入物料表失敗:", error); }
+        },
+
+        initNewOrder() {
+          if(!confirm("確定要開啟新單嗎？目前未儲存的資料將會遺失。")) return;
+          this.assemblies = [createDefaultAssembly(1)];
+          this.activeTab = 0;
+          this.profitMargin = 20;
+          this.searchOrderNo = "";
+          this.generateEstimateNo();
         },
 
         async generateEstimateNo() {
@@ -663,11 +657,32 @@
           } catch (e) { this.estimateNo = `${prefix}001`; }
         },
         
+        async loadEstimateFromDB() {
+          const queryNo = this.searchOrderNo.trim().toUpperCase();
+          if (!queryNo) return alert('請先輸入單號！');
+          try {
+            const { data, error } = await supabaseClient.from('estimates').select('*').eq('estimate_no', queryNo).maybeSingle();
+            if (error) throw error;
+            if (data) {
+              this.estimateNo = data.estimate_no;
+              this.profitMargin = data.details.profit_margin || 20;
+              // 還原總成資料
+              this.assemblies = data.details.assemblies.map(a => a.params);
+              this.activeTab = 'summary';
+              alert(`✅ 成功調閱單號: ${this.estimateNo}`);
+            } else {
+              alert(`找不到單號 ${queryNo}，請確認是否輸入正確。`);
+            }
+          } catch (error) {
+            alert('調閱失敗: ' + error.message);
+          }
+        },
+
         async saveEstimateToDB() {
-          await this.generateEstimateNo(); 
+          // 不再產生新單號，而是對當前的 this.estimateNo 進行 upsert (覆蓋/新增)
           const payload = {
             estimate_no: this.estimateNo,
-            quantity: this.assemblies.reduce((sum, asm) => sum + (Number(asm.quantity)||0), 0), // 取總數量概念，或可自訂
+            quantity: this.assemblies.reduce((sum, asm) => sum + (Number(asm.quantity)||0), 0),
             total_amount: this.grandFinalQuote,
             details: {
               profit_margin: this.profitMargin,
@@ -680,10 +695,10 @@
           };
 
           try {
-            const { error } = await supabaseClient.from('estimates').insert(payload);
+            // 使用 upsert，有同單號就更新，沒有就新增
+            const { error } = await supabaseClient.from('estimates').upsert(payload);
             if (error) throw error;
-            alert(`✅ 專案報價儲存成功！單號為: ${this.estimateNo}`);
-            this.generateEstimateNo();
+            alert(`✅ 專案報價儲存成功！單號: ${this.estimateNo}\n(若為舊單調閱，已直接覆蓋更新)`);
           } catch (error) { alert('儲存失敗: ' + error.message); }
         },
 
@@ -709,7 +724,6 @@
           nextTick(() => {
             document.querySelectorAll('.barcode-svg').forEach(svg => {
               let val = svg.getAttribute('data-value');
-              // 依據需求，改吃 material_id
               try {
                 JsBarcode(svg, val, { format: "CODE128", height: 30, displayValue: false, margin: 2, width: 1.5 });
               } catch (e) {
@@ -725,20 +739,18 @@
         },
         handleExportPDFSummary() {
           if (!window.html2pdf) return alert('PDF 模組準備中...');
-          const element = document.getElementById('summary-report-content');
-          window.html2pdf().set({
-            margin: 10, filename: `專案總表_${this.estimateNo}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-          }).from(element).save();
+          this.renderBarcodes(); // 確保附錄的條碼有渲染
+          setTimeout(() => {
+            const element = document.getElementById('summary-report-content');
+            window.html2pdf().set({
+              margin: 10, filename: `專案初算總表_${this.estimateNo}.pdf`,
+              image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(element).save();
+          }, 500);
         }
       }
     }).mount('#app');
   </script>
-  <style>
-    [v-cloak] { display: none; }
-    input[type=number]::-webkit-inner-spin-button, 
-    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-  </style>
 </body>
 </html>
