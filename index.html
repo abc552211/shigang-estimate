@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>印刷業雲端自動初算系統 - 完整接單版</title>
+  <title>印刷業雲端自動初算系統 - 完整報價版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -13,90 +13,59 @@
     [v-cloak] { display: none; }
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    /* 強制 PDF 容器寬度，解決字體與排版放大問題 */
+    .pdf-container { width: 210mm; min-height: 297mm; background: white; margin: 0 auto; box-sizing: border-box; }
     .print-avoid-break { page-break-inside: avoid; }
+    @media print { .no-print { display: none !important; } }
   </style>
 </head>
 <body class="bg-[#F4F1ED]">
   <div id="app" class="min-h-screen p-4 md:p-8 font-sans" v-cloak @click="closeDropdowns">
-    <div class="max-w-6xl mx-auto">
+    <div class="max-w-6xl mx-auto no-print">
       
       <div class="bg-[#EBECE7] border-l-4 border-[#7A8B76] p-4 mb-4 rounded-lg shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex items-center">
           <svg class="w-5 h-5 mr-3 text-[#7A8B76]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
           <div>
-            <p class="text-[#4A5D4E] font-bold text-sm md:text-base tracking-wide">
-              ※ 雲端初算系統 (紙板、加工、印刷、物料、正式報價)
-            </p>
+            <p class="text-[#4A5D4E] font-bold text-sm md:text-base tracking-wide">雲端初算與報價系統</p>
             <div class="text-xs font-bold mt-1 flex items-center" :class="dbConnected ? 'text-[#7A8B76]' : 'text-red-500'">
               <span class="w-2 h-2 rounded-full mr-2" :class="dbConnected ? 'bg-green-500' : 'bg-red-500 animate-pulse'"></span>
               {{ dbConnected ? '資料庫已連線' : '資料庫連線中...' }}
             </div>
           </div>
         </div>
-
         <div class="flex items-center space-x-2 bg-white p-2 rounded border border-[#D3D9D1] shadow-sm">
-          <button @click="initNewOrder" class="px-3 py-1.5 bg-[#DCD3C6] text-[#4A3F35] text-sm font-bold rounded hover:bg-[#B8A18E] transition whitespace-nowrap">
-            📝 開新單
-          </button>
+          <button @click="initNewOrder" class="px-3 py-1.5 bg-[#DCD3C6] text-[#4A3F35] text-sm font-bold rounded hover:bg-[#B8A18E] transition whitespace-nowrap">📝 開新單</button>
           <div class="w-px h-6 bg-gray-300 mx-1"></div>
           <input type="text" v-model="searchOrderNo" placeholder="輸入單號 (例: T2606001)" class="w-40 p-1.5 border border-[#DCD3C6] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#7A8B76]">
-          <button @click="loadEstimateFromDB" class="px-3 py-1.5 bg-[#5C4E43] text-white text-sm font-bold rounded hover:bg-[#4A3F35] transition whitespace-nowrap">
-            🔍 調閱
-          </button>
+          <button @click="loadEstimateFromDB" class="px-3 py-1.5 bg-[#5C4E43] text-white text-sm font-bold rounded hover:bg-[#4A3F35] transition whitespace-nowrap">🔍 調閱</button>
         </div>
       </div>
 
       <div class="flex space-x-1 mb-6 overflow-x-auto pb-2 border-b-2 border-[#DCD3C6]">
-        <button 
-          v-for="(asm, index) in assemblies" :key="asm.id"
-          @click="activeTab = index"
-          @dblclick="startEditingTab(index)"
-          class="px-4 py-2 rounded-t-lg font-bold text-sm transition-colors whitespace-nowrap min-w-[120px] flex items-center justify-center group relative"
-          :class="activeTab === index ? 'bg-[#5C4E43] text-[#F4F1ED]' : 'bg-[#EAE4DD] text-[#8B7E74] hover:bg-[#DCD3C6]'"
-        >
+        <button v-for="(asm, index) in assemblies" :key="asm.id" @click="activeTab = index" @dblclick="startEditingTab(index)" class="px-4 py-2 rounded-t-lg font-bold text-sm transition-colors whitespace-nowrap min-w-[120px] flex items-center justify-center group relative" :class="activeTab === index ? 'bg-[#5C4E43] text-[#F4F1ED]' : 'bg-[#EAE4DD] text-[#8B7E74] hover:bg-[#DCD3C6]'">
           <input v-if="editingTabIndex === index" v-model="asm.name" @blur="editingTabIndex = -1" @keyup.enter="editingTabIndex = -1" class="text-black px-1 rounded w-24 text-center text-sm absolute z-10 top-1.5" autofocus />
           <span v-else class="flex items-center">{{ asm.name }}</span>
           <span v-if="assemblies.length > 1 && activeTab === index && editingTabIndex !== index" @click.stop="removeAssembly(index)" class="ml-2 w-4 h-4 bg-red-400 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-opacity absolute right-2">✕</span>
         </button>
-
-        <button @click="addAssembly" class="px-4 py-2 bg-[#7A8B76] text-white rounded-t-lg font-bold text-sm hover:bg-[#4A5D4E] transition-colors">
-          ＋ 新增總成
-        </button>
-
+        <button @click="addAssembly" class="px-4 py-2 bg-[#7A8B76] text-white rounded-t-lg font-bold text-sm hover:bg-[#4A5D4E] transition-colors">＋ 新增總成</button>
         <div class="flex-1 border-b-2 border-[#5C4E43] mt-auto"></div>
-        
-        <button 
-          @click="activeTab = 'summary'"
-          class="px-5 py-2 rounded-t-lg font-black text-sm transition-colors whitespace-nowrap tracking-widest"
-          :class="activeTab === 'summary' ? 'bg-[#8B7E74] text-white shadow-inner' : 'bg-[#FCFBFA] text-[#8B7E74] border border-[#DCD3C6] border-b-0 hover:bg-[#F0EBE1]'"
-        >
-          📊 毛利估算表明細
-        </button>
-        <button 
-          @click="activeTab = 'quote'"
-          class="px-5 py-2 rounded-t-lg font-black text-sm transition-colors whitespace-nowrap tracking-widest ml-1"
-          :class="activeTab === 'quote' ? 'bg-[#4A5D4E] text-white shadow-inner' : 'bg-[#FCFBFA] text-[#4A5D4E] border border-[#DCD3C6] border-b-0 hover:bg-[#EBECE7]'"
-        >
-          📄 正式報價單
-        </button>
+        <button @click="activeTab = 'summary'" class="px-5 py-2 rounded-t-lg font-black text-sm transition-colors whitespace-nowrap tracking-widest" :class="activeTab === 'summary' ? 'bg-[#8B7E74] text-white shadow-inner' : 'bg-[#FCFBFA] text-[#8B7E74] border border-[#DCD3C6] border-b-0 hover:bg-[#F0EBE1]'">📊 毛利估算表明細</button>
+        <button @click="activeTab = 'quote'" class="px-5 py-2 rounded-t-lg font-black text-sm transition-colors whitespace-nowrap tracking-widest ml-1" :class="activeTab === 'quote' ? 'bg-[#4A5D4E] text-white shadow-inner' : 'bg-[#FCFBFA] text-[#4A5D4E] border border-[#DCD3C6] border-b-0 hover:bg-[#EBECE7]'">📄 正式報價單</button>
       </div>
 
       <div v-if="typeof activeTab === 'number'" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
         <div class="lg:col-span-5 space-y-6">
           
           <div class="bg-[#FCFBFA] p-6 rounded-2xl shadow-sm border border-[#EAE4DD]">
-            <h2 class="text-xl font-bold mb-5 flex items-center text-[#4A3F35]">
-              <svg class="w-5 h-5 mr-2 text-[#8F7E6D]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-              物料添加
-            </h2>
+            <h2 class="text-xl font-bold mb-5 flex items-center text-[#4A3F35]">物料添加 (支援 % 搜尋)</h2>
             <div class="flex flex-col space-y-3 relative">
               <div class="relative">
-                <input type="text" v-model="materialSearchQuery" @focus="isMaterialDropdownOpen = true" @click.stop placeholder="搜尋物料 (例: 膠帶%透明)" class="w-full p-2 border border-[#DCD3C6] bg-white rounded-md focus:ring-1 focus:ring-[#8B7E74] focus:outline-none"/>
+                <input type="text" v-model="materialSearchQuery" @focus="isMaterialDropdownOpen = true" @click.stop placeholder="搜尋物料 (例: 膠帶%透明)" class="w-full p-2 border border-[#DCD3C6] bg-white rounded-md focus:outline-none"/>
                 <ul v-if="isMaterialDropdownOpen && filteredMaterials.length > 0" class="absolute z-50 w-full mt-1 bg-white border border-[#DCD3C6] rounded-md shadow-lg max-h-60 overflow-y-auto">
                   <li v-for="mat in filteredMaterials" :key="mat.material_id || mat.id" @click.stop="selectMaterial(mat)" class="px-3 py-2 hover:bg-[#F0EBE1] cursor-pointer border-b border-gray-100">
                     <div class="font-bold text-[#4A5D4E] text-sm">{{ mat.material_name }}</div>
-                    <div class="text-xs text-gray-500">ID: {{ mat.material_id }} | 成本: ${{ mat.cost_price }}</div>
+                    <div class="text-xs text-gray-500">ID: {{ mat.material_id }} | 預設成本: ${{ mat.cost_price }}</div>
                   </li>
                 </ul>
               </div>
@@ -104,350 +73,253 @@
               <div v-if="selectedMaterial" class="p-4 bg-[#EFEAEB] border border-[#DED1D5] rounded space-y-3">
                 <div class="flex justify-between items-center border-b border-[#DCD3C6] pb-2">
                   <span class="font-bold text-[#6B5A5F]">{{ selectedMaterial.material_name }}</span>
-                  <button @click="selectedMaterial = null" class="text-red-400 hover:text-red-600 font-bold">✕ 取消</button>
+                  <button @click="selectedMaterial = null" class="text-red-400 font-bold text-xs">✕ 取消</button>
                 </div>
-                
                 <div class="grid grid-cols-2 gap-2 text-sm">
-                  <div><label class="text-xs text-[#8B7E74]">備註</label><input type="text" v-model="matTempRemark" class="w-full p-1 border rounded bg-white" placeholder="前端顯示備註"/></div>
-                  <div><label class="text-xs text-[#8B7E74]">數量</label><input type="number" v-model.number="matTempQty" class="w-full p-1 border rounded bg-white" min="1"/></div>
-                  <div><label class="text-xs text-[#8B7E74]">自訂成本價</label><input type="number" v-model.number="matTempCost" class="w-full p-1 border rounded bg-white"/></div>
-                  <div><label class="text-xs text-[#8B7E74]">自訂對外報價</label><input type="number" v-model.number="matTempSell" class="w-full p-1 border rounded bg-white"/></div>
+                  <div class="col-span-2"><label class="text-xs text-[#8B7E74]">前置備註</label><input type="text" v-model="matTempRemark" class="w-full p-1.5 border rounded bg-white" placeholder="例: 包裝用"/></div>
+                  <div><label class="text-xs text-[#8B7E74]">使用數量</label><input type="number" v-model.number="matTempQty" class="w-full p-1.5 border rounded bg-white" min="1"/></div>
+                  <div><label class="text-xs text-[#8B7E74]">成本價 (可微調)</label><input type="number" v-model.number="matTempCost" class="w-full p-1.5 border rounded bg-white"/></div>
+                  <div class="col-span-2"><label class="text-xs text-[#8B7E74]">對外賣價 (單個)</label><input type="number" v-model.number="matTempSell" class="w-full p-1.5 border rounded bg-white text-blue-700 font-bold"/></div>
                 </div>
-                
-                <button @click="addMaterialToList" class="w-full py-2 bg-[#7A8B76] text-white rounded font-bold hover:bg-[#4A5D4E]">確定加入清單</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-[#FCFBFA] p-5 rounded-2xl shadow-sm border border-[#EAE4DD]">
-            <div class="flex justify-between items-center mb-4">
-              <h2 class="text-lg font-bold flex items-center text-[#4A3F35]">
-                <svg class="w-5 h-5 mr-2 text-[#8B7E74]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                雲端紙價與高精準設定
-              </h2>
-              <button @click="saveSettingsToDB" class="px-3 py-1 bg-[#8B7E74] text-white text-xs rounded hover:bg-[#5C4E43] transition">
-                儲存設定
-              </button>
-            </div>
-            
-            <div class="space-y-4">
-              <div class="grid grid-cols-3 gap-2 p-3 bg-[#EFEAEB] rounded-xl border border-[#DED1D5]">
-                <div><span class="text-[10px] text-[#8B7E74] block">厚度 (mm/條)</span><input type="number" step="0.1" v-model.number="settings.board_thickness" class="w-full p-1 border rounded bg-white text-sm"/></div>
-                <div><span class="text-[10px] text-[#8B7E74] block">基重 (GSM)</span><input type="number" v-model.number="settings.base_gsm" class="w-full p-1 border rounded bg-white text-sm" placeholder="預留"/></div>
-                <div><span class="text-[10px] text-[#8B7E74] block">OZ/束</span><input type="number" v-model.number="settings.base_oz" class="w-full p-1 border rounded bg-white text-sm" placeholder="預留"/></div>
-              </div>
-
-              <div class="p-3 bg-[#F9F8F6] rounded-xl border border-[#DCD3C6]">
-                <p class="text-sm font-bold text-[#5C4E43] mb-2">全紙 (788x1094)</p>
-                <div class="grid grid-cols-3 gap-2 text-xs">
-                  <div><span class="text-[#8B7E74] block mb-1">灰紙/噸價</span><input type="number" v-model.number="settings.full_gray_price" class="w-full p-1.5 border rounded bg-white focus:outline-none"/></div>
-                  <div><span class="text-[#8B7E74] block mb-1">白紙/噸價</span><input type="number" v-model.number="settings.full_white_price" class="w-full p-1.5 border rounded bg-white focus:outline-none"/></div>
-                  <div><span class="text-[#8B7E74] block mb-1">一噸張數</span><input type="number" v-model.number="settings.full_sheets" class="w-full p-1.5 border rounded bg-white focus:outline-none"/></div>
-                </div>
-              </div>
-
-              <div class="p-3 bg-[#F9F8F6] rounded-xl border border-[#DCD3C6]">
-                <p class="text-sm font-bold text-[#5C4E43] mb-2">小板紙 (720x1000)</p>
-                <div class="grid grid-cols-3 gap-2 text-xs">
-                  <div><span class="text-[#8B7E74] block mb-1">灰紙/噸價</span><input type="number" v-model.number="settings.small_gray_price" class="w-full p-1.5 border rounded bg-white focus:outline-none"/></div>
-                  <div><span class="text-[#8B7E74] block mb-1">白紙/噸價</span><input type="number" v-model.number="settings.small_white_price" class="w-full p-1.5 border rounded bg-white focus:outline-none"/></div>
-                  <div><span class="text-[#8B7E74] block mb-1">一噸張數</span><input type="number" v-model.number="settings.small_sheets" class="w-full p-1.5 border rounded bg-white focus:outline-none"/></div>
-                </div>
+                <button @click="addMaterialToList" class="w-full py-2 bg-[#7A8B76] text-white rounded font-bold hover:bg-[#4A5D4E]">加入清單</button>
               </div>
             </div>
           </div>
 
           <div class="bg-[#FCFBFA] p-6 rounded-2xl shadow-sm border border-[#EAE4DD]">
-            <h2 class="text-xl font-bold mb-5 flex items-center text-[#4A3F35]">
-              <svg class="w-5 h-5 mr-2 text-[#8F7E6D]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/></svg>
-              【{{ activeAssembly.name }}】 初算參數
-            </h2>
-
-            <div class="mb-6">
-              <label class="block text-sm font-semibold text-[#5C4E43] mb-2">需求數量 (組)</label>
-              <input type="number" v-model.number="activeAssembly.quantity" class="w-full p-3 bg-[#F9F8F6] border border-[#DCD3C6] rounded-lg focus:outline-none"/>
+            <h2 class="text-xl font-bold mb-5 text-[#4A3F35]">【{{ activeAssembly.name }}】 初算參數</h2>
+            <div class="mb-4">
+              <label class="block text-sm font-semibold text-[#5C4E43] mb-1">需求數量 (組)</label>
+              <input type="number" v-model.number="activeAssembly.quantity" class="w-full p-2 border border-[#DCD3C6] rounded bg-[#F9F8F6] focus:outline-none"/>
             </div>
 
-            <div class="mb-6 p-4 bg-[#F0EBE1] rounded-xl border border-[#E2D6C8]">
-              <label class="block text-sm font-semibold text-[#5C4E43] mb-3">紙板尺寸與留邊設定</label>
-              <div class="grid grid-cols-2 gap-3 mb-3">
-                <div><span class="text-xs text-[#8B7E74]">實體寬度 (mm)</span><input type="number" v-model.number="activeAssembly.boardW" class="w-full p-2 border border-[#DCD3C6] rounded-md focus:outline-none" /></div>
-                <div><span class="text-xs text-[#8B7E74]">實體長度 (mm)</span><input type="number" v-model.number="activeAssembly.boardH" class="w-full p-2 border border-[#DCD3C6] rounded-md focus:outline-none" /></div>
-                <div><span class="text-xs text-red-500">寬度留邊 (mm)</span><input type="number" v-model.number="activeAssembly.marginW" class="w-full p-1.5 border border-[#DCD3C6] rounded-md focus:outline-none" /></div>
-                <div><span class="text-xs text-red-500">長度留邊 (mm)</span><input type="number" v-model.number="activeAssembly.marginH" class="w-full p-1.5 border border-[#DCD3C6] rounded-md focus:outline-none" /></div>
+            <div class="mb-4 p-4 bg-[#F0EBE1] rounded-xl border border-[#E2D6C8]">
+              <div class="flex justify-between items-center mb-3">
+                <label class="text-sm font-semibold text-[#5C4E43]">紙板規格與留邊</label>
+                <select v-model="activeAssembly.selectedSpec" @change="applyPaperSpec" class="p-1 text-xs border border-[#DCD3C6] rounded bg-white focus:outline-none">
+                  <option value="">-- 快速套用厚度/噸數 --</option>
+                  <option v-for="spec in paperSpecs" :value="spec.oz">{{ spec.label }}</option>
+                </select>
               </div>
-              <select v-model="activeAssembly.boardType" class="w-full p-2 border border-[#DCD3C6] rounded-md bg-white focus:outline-none">
-                <option value="gray">灰紙板</option><option value="white">單面白紙板</option>
+              <div class="grid grid-cols-2 gap-2 mb-3">
+                <div><span class="text-xs text-[#8B7E74]">實體寬度 (mm)</span><input type="number" v-model.number="activeAssembly.boardW" class="w-full p-1.5 border rounded bg-[#FCFBFA] focus:outline-none" /></div>
+                <div><span class="text-xs text-[#8B7E74]">實體長度 (mm)</span><input type="number" v-model.number="activeAssembly.boardH" class="w-full p-1.5 border rounded bg-[#FCFBFA] focus:outline-none" /></div>
+                <div><span class="text-xs text-red-500 font-bold">寬度留邊 (mm)</span><input type="number" v-model.number="activeAssembly.marginW" class="w-full p-1.5 border rounded bg-[#FCFBFA] focus:outline-none" /></div>
+                <div><span class="text-xs text-red-500 font-bold">長度留邊 (mm)</span><input type="number" v-model.number="activeAssembly.marginH" class="w-full p-1.5 border rounded bg-[#FCFBFA] focus:outline-none" /></div>
+              </div>
+              <div class="grid grid-cols-2 gap-2 mb-3 border-t border-[#DCD3C6] pt-3">
+                <div><span class="text-[10px] text-[#8B7E74] block">厚度 (mm)</span><input type="number" step="0.01" v-model.number="activeAssembly.thickness" class="w-full p-1.5 border rounded bg-white text-sm focus:outline-none"/></div>
+                <div><span class="text-[10px] text-[#8B7E74] block">一噸張數</span><input type="number" v-model.number="activeAssembly.sheetsPerTon" class="w-full p-1.5 border rounded bg-white text-sm focus:outline-none"/></div>
+              </div>
+              <select v-model="activeAssembly.boardType" class="w-full p-2 border border-[#DCD3C6] rounded bg-white focus:outline-none">
+                <option value="gray">使用灰紙板 (當前價: ${{settings.full_gray_price}}/噸)</option>
+                <option value="white">使用單面白紙板 (當前價: ${{settings.full_white_price}}/噸)</option>
               </select>
             </div>
 
-            <div class="mb-6 p-4 bg-[#EBECE7] rounded-xl border border-[#D3D9D1]">
+            <div class="mb-4 p-4 bg-[#EBECE7] rounded-xl border border-[#D3D9D1]">
               <label class="block text-sm font-semibold text-[#4A5D4E] mb-3">後加工選項</label>
-              <div class="space-y-3 text-sm">
-                <label class="flex items-center justify-between p-2 hover:bg-[#F4F5F2] rounded cursor-pointer">
-                  <span class="font-medium text-[#4A5D4E]">外包紙軋型 (宸昇)</span>
-                  <input type="checkbox" v-model="activeAssembly.needOuterDie" class="w-4 h-4 text-[#7A8B76] rounded"/>
-                </label>
-                <div class="p-2 bg-[#FCFBFA] rounded border border-[#D3D9D1]">
-                  <span class="font-medium text-[#4A5D4E] block mb-2">紙板軋型方式</span>
-                  <select v-model="activeAssembly.boardDieType" class="w-full p-2 border border-[#D3D9D1] rounded-md bg-[#F4F5F2] focus:outline-none">
-                    <option value="none">無</option><option value="chengsheng">宸昇軋型</option><option value="jiuyu">久昱代墊/軋</option>
-                  </select>
-                </div>
-                <label class="flex items-center justify-between p-2 hover:bg-[#F4F5F2] rounded cursor-pointer">
-                  <span class="font-medium text-[#4A5D4E]">刨溝處理</span>
-                  <input type="checkbox" v-model="activeAssembly.needGrooving" class="w-4 h-4 text-[#7A8B76] rounded"/>
-                </label>
-                <label class="flex items-center justify-between p-2 hover:bg-[#F4F5F2] rounded cursor-pointer">
-                  <span class="font-medium text-[#4A5D4E]">燙金處理</span>
-                  <input type="checkbox" v-model="activeAssembly.needFoil" class="w-4 h-4 text-[#7A8B76] rounded"/>
-                </label>
+              <div class="space-y-2 text-sm">
+                <label class="flex justify-between items-center"><span class="text-[#4A5D4E]">外包紙軋型 (宸昇)</span><input type="checkbox" v-model="activeAssembly.needOuterDie" class="w-4 h-4 rounded"/></label>
+                <div class="flex justify-between items-center mt-2"><span class="text-[#4A5D4E]">紙板軋型</span><select v-model="activeAssembly.boardDieType" class="p-1 border rounded bg-white text-xs"><option value="none">無</option><option value="chengsheng">宸昇軋型</option><option value="jiuyu">久昱代墊/軋</option></select></div>
+                <label class="flex justify-between items-center mt-2"><span class="text-[#4A5D4E]">刨溝處理</span><input type="checkbox" v-model="activeAssembly.needGrooving" class="w-4 h-4 rounded"/></label>
+                <label class="flex justify-between items-center mt-2"><span class="text-[#4A5D4E]">燙金處理</span><input type="checkbox" v-model="activeAssembly.needFoil" class="w-4 h-4 rounded"/></label>
               </div>
             </div>
 
             <div class="p-4 bg-[#EFEAEB] rounded-xl border border-[#DED1D5]">
-               <label class="flex items-center justify-between text-sm font-semibold text-[#6B5A5F] mb-3 cursor-pointer">
-                <span>印刷需求</span>
-                <input type="checkbox" v-model="activeAssembly.needPrint" class="w-4 h-4 text-[#9B7E84] rounded"/>
-              </label>
-              <div v-if="activeAssembly.needPrint" class="grid grid-cols-2 gap-3 mt-2">
-                <div><span class="text-xs text-[#8B7E74]">印刷色數</span><input type="number" v-model.number="activeAssembly.printColors" class="w-full p-2 border border-[#DED1D5] rounded-md bg-[#FCFBFA]" min="1"/></div>
-                <div><span class="text-xs text-[#8B7E74]">拼模數 (1張印幾模)</span><input type="number" v-model.number="activeAssembly.printModules" class="w-full p-2 border border-[#DED1D5] rounded-md bg-[#FCFBFA]" min="1"/></div>
+               <label class="flex justify-between items-center text-sm font-semibold text-[#6B5A5F] cursor-pointer"><span>印刷需求</span><input type="checkbox" v-model="activeAssembly.needPrint" class="w-4 h-4 rounded"/></label>
+              <div v-if="activeAssembly.needPrint" class="grid grid-cols-2 gap-3 mt-3">
+                <div><span class="text-xs text-[#8B7E74]">印刷色數</span><input type="number" v-model.number="activeAssembly.printColors" class="w-full p-1.5 border rounded bg-[#FCFBFA]" min="1"/></div>
+                <div><span class="text-xs text-[#8B7E74]">拼模數</span><input type="number" v-model.number="activeAssembly.printModules" class="w-full p-1.5 border rounded bg-[#FCFBFA]" min="1"/></div>
               </div>
             </div>
-
           </div>
         </div>
 
         <div class="lg:col-span-7 space-y-4">
-          <div id="report-content" class="bg-[#FCFBFA] p-8 rounded-2xl shadow-sm border border-[#EAE4DD]">
-            <div class="border-b-2 border-[#5C4E43] pb-4 mb-6 flex justify-between items-end">
-              <div>
-                <h1 class="text-3xl font-black text-[#4A3F35] tracking-wider mb-2">【{{ activeAssembly.name }}】成本初算</h1>
-                <p class="text-[#8B7E74] text-sm mt-2">單號: {{ estimateNo }}</p>
-              </div>
-              <div class="text-right">
-                <p class="text-sm text-[#8B7E74]">目標產量</p>
-                <p class="text-3xl font-bold text-[#4A3F35]">{{ activeAssembly.quantity }} <span class="text-base font-normal">組</span></p>
-              </div>
+          <div class="bg-[#FCFBFA] p-8 rounded-2xl shadow-sm border border-[#EAE4DD]">
+            <h1 class="text-2xl font-black text-[#4A3F35] border-b-2 border-[#5C4E43] pb-2 mb-6">【{{ activeAssembly.name }}】 試算摘要</h1>
+            <div class="space-y-3 mb-6 text-sm">
+              <div class="flex justify-between p-2 bg-[#F9F8F6] rounded border"><span class="font-bold">紙板計算</span><span class="text-right text-xs">{{activeCalcResult.board.formula}} <br/><span class="text-[#5C4E43] font-bold text-sm">${{ formatMoney(activeCalcResult.board.total) }}</span></span></div>
+              <div v-if="activeCalcResult.outerDie.total > 0" class="flex justify-between p-2 bg-[#F9F8F6] rounded border"><span class="font-bold">外包紙軋型</span><span>${{ formatMoney(activeCalcResult.outerDie.total) }}</span></div>
+              <div v-if="activeCalcResult.boardDie.total > 0" class="flex justify-between p-2 bg-[#F9F8F6] rounded border"><span class="font-bold">紙板軋型</span><span>${{ formatMoney(activeCalcResult.boardDie.total) }}</span></div>
+              <div v-if="activeCalcResult.grooving.total > 0" class="flex justify-between p-2 bg-[#F9F8F6] rounded border"><span class="font-bold">刨溝</span><span>${{ formatMoney(activeCalcResult.grooving.total) }}</span></div>
+              <div v-if="activeCalcResult.foil.total > 0" class="flex justify-between p-2 bg-[#F9F8F6] rounded border"><span class="font-bold">燙金</span><span>${{ formatMoney(activeCalcResult.foil.total) }}</span></div>
+              <div v-if="activeCalcResult.print.total > 0" class="flex justify-between p-2 bg-[#F9F8F6] rounded border"><span class="font-bold">印刷 ({{activeAssembly.printColors}}色)</span><span>${{ formatMoney(activeCalcResult.print.total) }}</span></div>
             </div>
 
-            <div class="space-y-4 mb-8">
-              <h3 class="font-bold text-lg text-[#5C4E43] border-l-4 border-[#8B7E74] pl-2">▍ 紙板與加工成本</h3>
-              
-              <div v-if="activeCalcResult.board.total > 0" class="flex justify-between items-center p-3 bg-[#F9F8F6] rounded-lg border border-[#EAE4DD]">
-                <div>
-                  <p class="font-bold text-[#5C4E43]">紙板成本</p>
-                  <p class="text-[11px] text-[#A3968C] font-mono bg-[#F0EBE1] px-1.5 py-0.5 rounded inline-block">算式: {{ activeCalcResult.board.formula }}</p>
+            <div v-if="activeAssembly.addedMaterials.length > 0" class="space-y-2 mb-6">
+              <h3 class="font-bold text-[#5C4E43] border-l-4 border-[#7A8B76] pl-2 mb-2">附加物料</h3>
+              <div v-for="(mat, idx) in activeAssembly.addedMaterials" :key="idx" class="flex justify-between items-center p-2 bg-white rounded border text-sm">
+                <div class="flex items-center space-x-3">
+                  <div class="w-20 h-8 bg-gray-50 flex items-center justify-center overflow-hidden border"><svg class="barcode-svg" :data-value="mat.material_id"></svg></div>
+                  <span><span v-if="mat.remark" class="text-red-500 font-bold">[{{mat.remark}}] </span>{{ mat.material_name }} x{{ mat.qty }}</span>
                 </div>
                 <div class="text-right">
-                  <p class="font-semibold text-[#5C4E43]">${{ formatMoney(activeCalcResult.board.total) }}</p>
-                </div>
-              </div>
-              <p class="text-sm text-gray-500 italic">...加工與印刷費用以計算入總額，詳見總表...</p>
-            </div>
-
-            <div v-if="activeAssembly.addedMaterials.length > 0" class="space-y-4 mb-8">
-              <h3 class="font-bold text-lg text-[#5C4E43] border-l-4 border-[#7A8B76] pl-2 mt-6">▍ 物料成本清單</h3>
-              <div v-for="(mat, idx) in activeAssembly.addedMaterials" :key="idx" class="flex justify-between items-center p-3 bg-white rounded-lg border border-[#D3D9D1]">
-                <div class="flex items-center space-x-4">
-                  <div class="bg-white p-1 border rounded hidden md:block">
-                    <svg class="barcode-svg" :data-value="mat.material_id || mat.id"></svg>
-                  </div>
-                  <div>
-                    <p class="font-bold text-[#4A5D4E]"><span v-if="mat.remark" class="text-red-500">[{{mat.remark}}]</span> {{ mat.material_name }}</p>
-                    <p class="text-xs text-[#7A8B76]">賣價/對外: ${{ mat.sell_price }}</p>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <p class="font-semibold text-[#4A5D4E]">${{ formatMoney(mat.qty * mat.cost_price) }}</p>
-                  <p class="text-xs text-[#7A8B76]">{{ mat.qty }} @ 成本 ${{ mat.cost_price }}</p>
-                  <button @click="removeMaterial(idx)" class="text-xs text-red-400 mt-1 hover:underline cursor-pointer">移除</button>
+                  <span>成本: ${{ formatMoney(mat.qty * mat.cost_price) }}</span>
+                  <button @click="removeMaterial(idx)" class="ml-3 text-red-400 hover:text-red-600 text-xs">移除</button>
                 </div>
               </div>
             </div>
 
-            <div class="bg-[#FCFBFA] border-2 border-[#DCD3C6] rounded-xl p-6 flex justify-between items-center mt-6">
-              <div>
-                <p class="text-[#8B7E74] text-sm mb-1 font-medium">單項總金額</p>
-                <p class="text-3xl font-black text-[#4A3F35]"><span class="text-lg text-[#8B7E74]">$</span> {{ formatMoney(activeFinalTotal) }}</p>
-              </div>
+            <div class="bg-[#5C4E43] text-[#F4F1ED] rounded-xl p-4 flex justify-between items-center">
+              <span class="text-sm">單成總成本</span><span class="text-2xl font-bold">${{ formatMoney(activeFinalTotal) }}</span>
             </div>
-            
           </div>
         </div>
       </div>
 
-      <div v-if="activeTab === 'summary'" class="space-y-6">
-        
-        <div class="flex justify-between items-center bg-[#FCFBFA] p-5 rounded-xl shadow-sm border border-[#EAE4DD]">
-          <div class="flex items-center space-x-4">
-            <h2 class="text-xl font-bold text-[#4A3F35]">專案毛利設定</h2>
-            <div class="flex items-center space-x-2 bg-[#F0EBE1] px-3 py-1.5 rounded-lg border border-[#E2D6C8]">
-              <span class="text-sm font-bold text-[#5C4E43]">預估利潤率 (%)</span>
-              <input type="number" v-model.number="profitMargin" class="w-16 p-1 text-center border border-[#DCD3C6] rounded focus:outline-none font-bold text-[#4A5D4E]" min="0"/>
-            </div>
-          </div>
-          <div class="flex space-x-3">
-             <button @click="saveEstimateToDB" class="flex items-center px-4 py-2 bg-[#7A8B76] text-white font-bold rounded-lg hover:bg-[#4A5D4E] shadow-sm transition">儲存專案至雲端</button>
-          </div>
-        </div>
-
+      <div v-show="activeTab === 'summary'" class="space-y-6">
         <div class="bg-white p-8 rounded-2xl shadow-sm border border-[#EAE4DD]">
            <div class="border-b-4 border-[#5C4E43] pb-4 mb-6 flex justify-between items-end">
-              <div>
-                <h1 class="text-4xl font-black text-[#4A3F35] tracking-widest mb-2">毛利估算表明細 (內部用)</h1>
-                <p class="text-[#8B7E74] font-mono bg-[#EAE4DD] inline-block px-2 py-1 rounded">單號: {{ estimateNo }}</p>
-              </div>
+              <div><h1 class="text-3xl font-black text-[#4A3F35]">毛利估算表明細 (內部用)</h1></div>
+              <div class="text-right text-sm">單號: {{ estimateNo }}</div>
             </div>
 
-            <div class="space-y-4 mb-8">
-              <table class="w-full text-left border-collapse">
-                <thead>
-                  <tr class="bg-[#EAE4DD] text-[#5C4E43] text-sm">
-                    <th class="p-3 rounded-tl-lg">總成名稱</th>
-                    <th class="p-3 text-right">紙/印/加工成本</th>
-                    <th class="p-3 text-right">物料成本</th>
-                    <th class="p-3 text-right font-bold text-red-700">總成本</th>
-                    <th class="p-3 text-right rounded-tr-lg font-bold text-blue-700">總對外報價 (含物料賣價)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(asm, idx) in assemblies" :key="asm.id" class="border-b border-[#EAE4DD]">
-                    <td class="p-3 font-bold text-[#4A5D4E]">{{ asm.name }}</td>
-                    <td class="p-3 text-right text-[#8B7E74]">${{ formatMoney(allCalculations[idx].result.total) }}</td>
-                    <td class="p-3 text-right text-[#8B7E74]">${{ formatMoney(allCalculations[idx].materialTotal) }}</td>
-                    <td class="p-3 text-right font-bold text-red-700">${{ formatMoney(allCalculations[idx].finalTotal) }}</td>
-                    <td class="p-3 text-right font-bold text-blue-700">${{ formatMoney(allCalculations[idx].finalSellTotal) }}</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="flex justify-end mb-4 items-center space-x-2">
+              <span class="text-sm font-bold text-[#5C4E43]">預估利潤率 (%)</span>
+              <input type="number" v-model.number="profitMargin" class="w-16 p-1 text-center border border-[#DCD3C6] rounded font-bold bg-[#F0EBE1]"/>
             </div>
 
-            <div class="flex justify-end">
-              <div class="w-full md:w-1/2 bg-[#5C4E43] text-[#F4F1ED] rounded-2xl p-6 shadow-md">
-                <div class="flex justify-between items-center mb-3 pb-3 border-b border-[#8B7E74]">
-                  <span class="text-[#DCD3C6] font-medium">A. 專案總成本</span>
-                  <span class="text-xl font-bold">${{ formatMoney(grandTotalCost) }}</span>
-                </div>
-                <div class="flex justify-between items-center mb-3 pb-3 border-b border-[#8B7E74]">
-                  <span class="text-[#DCD3C6] font-medium">B. 預估利潤加給 ({{ profitMargin }}%)</span>
-                  <span class="text-xl font-bold text-[#A3D9A5]">+ ${{ formatMoney(grandProfitAmount) }}</span>
-                </div>
-                <div class="flex justify-between items-center mb-3 pb-3 border-b border-[#8B7E74]">
-                  <span class="text-[#DCD3C6] font-medium">C. 物料價差利潤</span>
-                  <span class="text-xl font-bold text-[#A3D9A5]">+ ${{ formatMoney(grandMaterialProfit) }}</span>
-                </div>
-                <div class="flex justify-between items-end mt-4">
-                  <span class="text-[#DCD3C6] font-medium text-lg">最終專案建議報價</span>
-                  <span class="text-5xl font-black text-[#F4F1ED] tracking-wide"><span class="text-2xl text-[#B8A18E]">$</span>{{ formatMoney(grandFinalQuote) }}</span>
-                </div>
-              </div>
-            </div>
-        </div>
-      </div>
-
-      <div v-if="activeTab === 'quote'" class="space-y-6">
-        
-        <div class="bg-[#FCFBFA] p-5 rounded-xl shadow-sm border border-[#EAE4DD] flex justify-between">
-          <div class="flex items-center space-x-4">
-            <h2 class="text-xl font-bold text-[#4A3F35]">報價客戶選擇</h2>
-            <div class="relative">
-              <input type="text" v-model="customerSearchQuery" @focus="isCustomerDropdownOpen = true" placeholder="搜尋客戶名稱/統編" class="w-64 p-2 border border-[#DCD3C6] rounded focus:outline-none"/>
-              <ul v-if="isCustomerDropdownOpen && filteredCustomers.length > 0" class="absolute z-50 w-full mt-1 bg-white border border-[#DCD3C6] rounded-md shadow-lg max-h-60 overflow-y-auto">
-                <li v-for="cust in filteredCustomers" :key="cust.customer_id" @click.stop="selectCustomer(cust)" class="px-3 py-2 hover:bg-[#F0EBE1] cursor-pointer border-b border-gray-100">
-                  <div class="font-bold text-[#4A5D4E] text-sm">{{ cust.customer_name }}</div>
-                  <div class="text-xs text-gray-500">ID: {{ cust.customer_id }}</div>
-                </li>
-              </ul>
-            </div>
-            <div v-if="quoteCustomer" class="text-sm font-bold text-[#7A8B76] bg-[#EBECE7] px-3 py-1.5 rounded">
-              已選擇: {{ quoteCustomer.customer_name }}
-            </div>
-          </div>
-          <div class="flex space-x-2">
-            <label class="cursor-pointer px-4 py-2 bg-[#DCD3C6] text-[#4A3F35] text-sm font-bold rounded hover:bg-[#B8A18E] transition">
-              上傳 Logo (200x200)
-              <input type="file" class="hidden" accept="image/*" @change="handleLogoUpload">
-            </label>
-            <button @click="handleExportPDFQuote" class="flex items-center px-4 py-2 bg-[#4A5D4E] text-white font-bold rounded-lg hover:bg-[#344437] shadow-sm transition-all">匯出正式報價單 PDF</button>
-          </div>
-        </div>
-
-        <div id="quote-report-content" class="bg-white p-10 rounded-2xl shadow-sm border border-[#EAE4DD] min-h-[800px] relative">
-            
-            <div class="flex justify-between items-start border-b-2 border-black pb-4 mb-6">
-              <div class="flex items-center space-x-4">
-                <img v-if="settings.company_logo" :src="settings.company_logo" alt="Company Logo" class="w-[80px] h-[80px] object-contain">
-                <div>
-                  <h1 class="text-3xl font-black text-black tracking-widest">{{ myCompany?.customer_name || '我司名稱' }}</h1>
-                  <p class="text-sm text-gray-600 mt-1">統一編號: {{ myCompany?.customer_id }} | 電話: {{ myCompany?.phone }} | 傳真: {{ myCompany?.fax }}</p>
-                </div>
-              </div>
-              <div class="text-right">
-                <h2 class="text-4xl font-bold text-gray-300 mb-2">報 價 單</h2>
-                <p class="text-sm">單號: {{ estimateNo }}</p>
-                <p class="text-sm">日期: {{ currentDateTime.split(' ')[0] }}</p>
-              </div>
-            </div>
-
-            <div class="flex justify-between mb-8 text-sm">
-              <div class="w-1/2 space-y-1">
-                <p><span class="font-bold inline-block w-20">報價對象:</span> {{ quoteCustomer?.customer_name || '______________' }}</p>
-                <p><span class="font-bold inline-block w-20">統一編號:</span> {{ quoteCustomer?.customer_id || '______________' }}</p>
-                <p><span class="font-bold inline-block w-20">聯絡電話:</span> {{ quoteCustomer?.phone || '______________' }}</p>
-              </div>
-            </div>
-
-            <table class="w-full text-left border-collapse border border-black mb-8 text-sm">
+            <table class="w-full text-left border-collapse text-sm mb-6">
               <thead>
-                <tr class="bg-gray-100">
-                  <th class="border border-black p-2 text-center w-12">項次</th>
-                  <th class="border border-black p-2">品名 / 規格描述</th>
-                  <th class="border border-black p-2 text-right w-20">數量</th>
-                  <th class="border border-black p-2 text-right w-24">單價</th>
-                  <th class="border border-black p-2 text-right w-28">金額</th>
+                <tr class="bg-[#EAE4DD] text-[#5C4E43]">
+                  <th class="p-2">總成名稱</th><th class="p-2 text-right">紙/印成本</th><th class="p-2 text-right">物料成本</th><th class="p-2 text-right text-red-700">總成本</th><th class="p-2 text-right text-blue-700">含利潤報價</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(asm, idx) in assemblies" :key="asm.id">
-                  <td class="border border-black p-2 text-center">{{ idx + 1 }}</td>
-                  <td class="border border-black p-2">
-                    <p class="font-bold">{{ asm.name }}</p>
-                    <p class="text-xs text-gray-600 mt-1">尺寸: {{asm.boardW}}x{{asm.boardH}}mm | 材質: {{asm.boardType==='gray'?'灰紙板':'單面白紙板'}}</p>
-                    <p class="text-xs text-gray-600" v-if="asm.needPrint || asm.needFoil || asm.needGrooving">加工: <span v-if="asm.needPrint">印刷{{asm.printColors}}色</span> <span v-if="asm.needGrooving">刨溝</span> <span v-if="asm.needFoil">燙金</span></p>
-                    
-                    <div v-if="asm.addedMaterials.length > 0" class="mt-2 text-xs border-t border-dashed border-gray-300 pt-1">
-                      <span class="font-bold">包含物料:</span>
-                      <span v-for="mat in asm.addedMaterials" class="ml-1 text-gray-600">[{{mat.remark}}] {{mat.material_name}} x{{mat.qty}},</span>
-                    </div>
-                  </td>
-                  <td class="border border-black p-2 text-right">{{ asm.quantity }}</td>
-                  <td class="border border-black p-2 text-right">${{ formatMoney(allCalculations[idx].quoteUnitSell) }}</td>
-                  <td class="border border-black p-2 text-right font-bold">${{ formatMoney(allCalculations[idx].quoteTotalSell) }}</td>
+                <tr v-for="(asm, idx) in assemblies" :key="asm.id" class="border-b border-[#EAE4DD]">
+                  <td class="p-2 font-bold">{{ asm.name }} ({{asm.quantity}}組)</td>
+                  <td class="p-2 text-right">${{ formatMoney(allCalculations[idx].result.total) }}</td>
+                  <td class="p-2 text-right">${{ formatMoney(allCalculations[idx].materialTotal) }}</td>
+                  <td class="p-2 text-right font-bold text-red-700">${{ formatMoney(allCalculations[idx].finalTotal) }}</td>
+                  <td class="p-2 text-right font-bold text-blue-700">${{ formatMoney(allCalculations[idx].finalSellTotal) }}</td>
                 </tr>
               </tbody>
             </table>
 
-            <div class="flex justify-end mb-8">
+            <div class="flex justify-end">
+              <div class="w-1/2 bg-[#5C4E43] text-[#F4F1ED] rounded-xl p-4 shadow-md text-sm">
+                <div class="flex justify-between border-b border-[#8B7E74] pb-2 mb-2"><span>A. 專案總成本</span><span class="font-bold">${{ formatMoney(grandTotalCost) }}</span></div>
+                <div class="flex justify-between border-b border-[#8B7E74] pb-2 mb-2"><span>B. 加工紙料利潤 ({{ profitMargin }}%)</span><span class="font-bold text-[#A3D9A5]">+ ${{ formatMoney(grandProfitAmount) }}</span></div>
+                <div class="flex justify-between border-b border-[#8B7E74] pb-2 mb-2"><span>C. 物料價差利潤</span><span class="font-bold text-[#A3D9A5]">+ ${{ formatMoney(grandMaterialProfit) }}</span></div>
+                <div class="flex justify-between items-end mt-2"><span class="text-base">最終建議報價</span><span class="text-2xl font-black">${{ formatMoney(grandFinalQuote) }}</span></div>
+              </div>
+            </div>
+        </div>
+      </div>
+
+      <div v-show="activeTab === 'quote'" class="space-y-6">
+        
+        <div class="bg-[#FCFBFA] p-4 rounded-xl shadow-sm border border-[#EAE4DD] flex flex-wrap gap-4 justify-between items-center no-print">
+          <div class="flex items-center space-x-4">
+            <div class="relative">
+              <input type="text" v-model="customerSearchQuery" @focus="isCustomerDropdownOpen = true" placeholder="搜尋客戶名稱/統編" class="w-56 p-1.5 text-sm border rounded focus:outline-none"/>
+              <ul v-if="isCustomerDropdownOpen && filteredCustomers.length > 0" class="absolute z-50 w-full mt-1 bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
+                <li v-for="cust in filteredCustomers" :key="cust.tax_id" @click.stop="selectCustomer(cust)" class="px-2 py-1 text-sm hover:bg-gray-100 cursor-pointer border-b">
+                  <div class="font-bold">{{ cust.customer_name }}</div>
+                  <div class="text-xs text-gray-500">{{ cust.tax_id }}</div>
+                </li>
+              </ul>
+            </div>
+            <div v-if="quoteCustomer" class="text-xs font-bold text-[#7A8B76] bg-[#EBECE7] px-2 py-1 rounded">客戶: {{ quoteCustomer.customer_name }}</div>
+          </div>
+          <div class="flex space-x-2 text-sm">
+            <label class="cursor-pointer px-3 py-1.5 bg-[#DCD3C6] font-bold rounded hover:bg-[#B8A18E]">上傳示意圖 (限2張)
+              <input type="file" class="hidden" accept="image/*" multiple @change="handleReferenceUpload">
+            </label>
+            <button @click="saveEstimateToDB" class="px-3 py-1.5 bg-[#7A8B76] text-white font-bold rounded hover:bg-[#4A5D4E]">儲存</button>
+            <button @click="handleExportPDFQuote" class="px-3 py-1.5 bg-[#5C4E43] text-white font-bold rounded hover:bg-[#344437]">匯出 PDF</button>
+          </div>
+        </div>
+
+        <div id="quote-report-content" class="pdf-container p-10 text-[13px] text-black shadow-lg">
+            
+            <div class="flex justify-between items-end border-b-2 border-black pb-4 mb-4">
+              <div>
+                <h1 class="text-2xl font-black tracking-widest">{{ myCompany?.customer_name || '我司名稱未設定' }}</h1>
+                <p class="text-[11px] text-gray-700 mt-1">統編: {{ myCompany?.tax_id }} | 電話: {{ myCompany?.phone }} | 傳真: {{ myCompany?.fax }}</p>
+                <p class="text-[11px] text-gray-700">{{ myCompany?.address }}</p>
+              </div>
+              <div class="text-right">
+                <h2 class="text-3xl font-bold text-gray-300 mb-1 tracking-widest">報 價 單</h2>
+                <p class="text-[11px]">單號: {{ estimateNo }}</p>
+                <p class="text-[11px]">日期: {{ currentDateTime.split(' ')[0] }}</p>
+              </div>
+            </div>
+
+            <div class="flex justify-between mb-6 text-[12px]">
+              <div class="w-1/2 space-y-1">
+                <p><span class="font-bold inline-block w-16">報價對象:</span> {{ quoteCustomer?.customer_name || '' }}</p>
+                <p><span class="font-bold inline-block w-16">統一編號:</span> {{ quoteCustomer?.tax_id || '' }}</p>
+                <p><span class="font-bold inline-block w-16">地址:</span> {{ quoteCustomer?.address || '' }}</p>
+              </div>
+              <div class="w-1/2 space-y-1 pl-4">
+                <p><span class="font-bold inline-block w-16">聯絡人:</span> {{ quoteCustomer?.contact_person || '' }}</p>
+                <p><span class="font-bold inline-block w-16">電話:</span> {{ quoteCustomer?.phone || '' }}</p>
+                <p><span class="font-bold inline-block w-16">傳真:</span> {{ quoteCustomer?.fax || '' }}</p>
+              </div>
+            </div>
+
+            <table class="w-full text-left border-collapse border border-black mb-6">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="border border-black p-1.5 text-center w-10">項次</th>
+                  <th class="border border-black p-1.5">品名 / 規格描述</th>
+                  <th class="border border-black p-1.5 text-right w-16">數量</th>
+                  <th class="border border-black p-1.5 text-right w-20">單價</th>
+                  <th class="border border-black p-1.5 text-right w-24">金額</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(asm, idx) in assemblies" :key="asm.id">
+                  <td class="border border-black p-1.5 text-center">{{ idx + 1 }}</td>
+                  <td class="border border-black p-1.5 leading-relaxed">
+                    <p class="font-bold text-[14px]">{{ asm.name }}</p>
+                    <p class="text-[11px] text-gray-700">尺寸: {{asm.boardW}}x{{asm.boardH}}mm | 材質: {{asm.boardType==='gray'?'灰紙板':'單面白紙板'}} ({{asm.thickness}}mm)</p>
+                    <p class="text-[11px] text-gray-700" v-if="asm.needPrint || asm.needFoil || asm.needGrooving">加工: <span v-if="asm.needPrint">印刷{{asm.printColors}}色</span> <span v-if="asm.needGrooving">刨溝</span> <span v-if="asm.needFoil">燙金</span></p>
+                    
+                    <div v-if="asm.addedMaterials.length > 0" class="mt-1 text-[11px] border-t border-dashed border-gray-300 pt-1">
+                      <span class="font-bold">包含組件:</span>
+                      <span v-for="mat in asm.addedMaterials" class="ml-1 text-gray-700">[{{mat.remark}}] {{mat.material_name}} x{{mat.qty}},</span>
+                    </div>
+                  </td>
+                  <td class="border border-black p-1.5 text-right align-top pt-2">{{ asm.quantity }}</td>
+                  <td class="border border-black p-1.5 text-right align-top pt-2">${{ formatMoney(allCalculations[idx].quoteUnitSell) }}</td>
+                  <td class="border border-black p-1.5 text-right font-bold align-top pt-2">${{ formatMoney(allCalculations[idx].quoteTotalSell) }}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="flex justify-end mb-6 print-avoid-break">
               <div class="w-1/3">
-                <div class="flex justify-between font-bold text-lg border-b-2 border-black pb-1 mb-1">
+                <div class="flex justify-between font-bold text-[15px] border-b-2 border-black pb-1">
                   <span>總計 (未稅):</span>
                   <span>${{ formatMoney(grandFinalQuote) }}</span>
                 </div>
               </div>
             </div>
 
-            <div class="text-xs text-gray-600 space-y-1">
-              <p class="font-bold">備註事項：</p>
+            <div v-if="referenceImages.length > 0" class="mb-6 print-avoid-break">
+              <p class="font-bold mb-2">附錄示意圖：</p>
+              <div class="flex gap-4">
+                <div v-for="img in referenceImages" class="w-1/2 h-40 border border-gray-300 flex items-center justify-center p-1">
+                  <img :src="img" class="max-w-full max-h-full object-contain" />
+                </div>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-gray-700 space-y-1 print-avoid-break">
+              <p class="font-bold text-black text-[12px]">備註事項：</p>
               <p>1. 本報價單有效期限為 14 天。</p>
               <p>2. 匯款帳號: {{ myCompany?.bank_code }} - {{ myCompany?.bank_account }}</p>
               <p>3. 若有未盡事宜，依雙方合約為準。</p>
             </div>
 
-            <div class="absolute bottom-10 right-10 text-center">
-              <div class="w-32 h-12 border-b border-black mb-2"></div>
-              <p class="text-xs">客戶簽章</p>
+            <div class="absolute bottom-8 right-12 text-center print-avoid-break">
+              <div class="w-32 h-10 border-b border-black mb-1"></div>
+              <p class="text-[11px]">客戶簽章</p>
             </div>
         </div>
       </div>
@@ -462,10 +334,21 @@
 
     const { createApp, nextTick } = Vue;
 
+    const paperLookup = [
+      { oz: 20, thickness: 1.15, sheets: 1480, label: '20 OZ (1.15mm) - 1480張' },
+      { oz: 24, thickness: 1.40, sheets: 1240, label: '24 OZ (1.40mm) - 1240張' },
+      { oz: 28, thickness: 1.60, sheets: 1080, label: '28 OZ (1.60mm) - 1080張' },
+      { oz: 32, thickness: 1.80, sheets: 940, label: '32 OZ (1.80mm) - 940張' },
+      { oz: 36, thickness: 2.00, sheets: 840, label: '36 OZ (2.00mm) - 840張' },
+      { oz: 40, thickness: 2.25, sheets: 740, label: '40 OZ (2.25mm) - 740張' },
+      { oz: 44, thickness: 2.70, sheets: 624, label: '44 OZ (2.70mm) - 624張' }
+    ];
+
     const createDefaultAssembly = (indexCount) => ({
       id: Date.now() + Math.random(),
       name: `總成 ${indexCount}`,
       quantity: 1000,
+      selectedSpec: 36, thickness: 2.0, sheetsPerTon: 840,
       boardW: '', boardH: '', marginW: 5, marginH: 5, boardType: 'gray',
       needOuterDie: false, boardDieType: 'none',
       needGrooving: false, needFoil: false,
@@ -477,310 +360,169 @@
       data() {
         return {
           dbConnected: false,
-          
+          paperSpecs: paperLookup,
           settings: {
             board_thickness: 2.0, full_gray_price: 29200, full_white_price: 33000, full_sheets: 820,
-            small_gray_price: 27500, small_white_price: 30150, small_sheets: 820,
-            base_gsm: null, base_oz: null, company_logo: null
+            small_gray_price: 27500, small_white_price: 30150, small_sheets: 820
           },
 
-          dbMaterials: [],
-          materialSearchQuery: "",
-          isMaterialDropdownOpen: false,
-          selectedMaterial: null,
+          dbMaterials: [], materialSearchQuery: "", isMaterialDropdownOpen: false, selectedMaterial: null,
+          matTempRemark: "", matTempQty: 1, matTempCost: 0, matTempSell: 0,
           
-          // 暫存修改物料
-          matTempRemark: "",
-          matTempQty: 1,
-          matTempCost: 0,
-          matTempSell: 0,
-          
-          // 客戶系統
-          dbCustomers: [],
-          myCompany: null,
-          customerSearchQuery: "",
-          isCustomerDropdownOpen: false,
-          quoteCustomer: null,
+          dbCustomers: [], myCompany: null, customerSearchQuery: "", isCustomerDropdownOpen: false, quoteCustomer: null,
+          referenceImages: [], // 示意圖 (Base64)
 
-          estimateNo: "讀取中...",
-          currentDateTime: new Date().toLocaleString('zh-TW'),
-          searchOrderNo: "", 
-
-          assemblies: [createDefaultAssembly(1)],
-          activeTab: 0, 
-          editingTabIndex: -1,
-          profitMargin: 20 
+          estimateNo: "讀取中...", currentDateTime: new Date().toLocaleString('zh-TW'), searchOrderNo: "", 
+          assemblies: [createDefaultAssembly(1)], activeTab: 0, editingTabIndex: -1, profitMargin: 20 
         }
       },
       computed: {
         filteredMaterials() {
           if (!this.materialSearchQuery.trim()) return [];
           const queries = this.materialSearchQuery.split('%').map(q => q.trim().toLowerCase()).filter(q => q);
-          return this.dbMaterials.filter(mat => {
-            const textToSearch = `${mat.material_name || ''} ${mat.material_spec || ''} ${mat.material_id || mat.id || ''}`.toLowerCase();
-            return queries.every(q => textToSearch.includes(q));
-          }).slice(0, 20);
+          return this.dbMaterials.filter(mat => queries.every(q => `${mat.material_name} ${mat.material_spec} ${mat.material_id}`.toLowerCase().includes(q))).slice(0, 20);
         },
         filteredCustomers() {
           if (!this.customerSearchQuery.trim()) return [];
           const q = this.customerSearchQuery.toLowerCase();
-          return this.dbCustomers.filter(c => c.customer_id !== 'C00000000' && ((c.customer_name||'').toLowerCase().includes(q) || (c.customer_id||'').includes(q)));
+          return this.dbCustomers.filter(c => c.tax_id !== 'C00000000' && (`${c.customer_name} ${c.tax_id}`.toLowerCase().includes(q)));
         },
-
-        activeAssembly() {
-          if (typeof this.activeTab !== 'number' || !this.assemblies[this.activeTab]) return this.assemblies[0];
-          return this.assemblies[this.activeTab];
-        },
-        
+        activeAssembly() { return typeof this.activeTab === 'number' && this.assemblies[this.activeTab] ? this.assemblies[this.activeTab] : this.assemblies[0]; },
         activeCalcResult() { return this.calculateAssembly(this.activeAssembly); },
-        activeMaterialTotal() { return this.activeAssembly.addedMaterials.reduce((sum, item) => sum + (item.qty * (item.cost_price || 0)), 0); },
+        activeMaterialTotal() { return this.activeAssembly.addedMaterials.reduce((sum, m) => sum + (m.qty * m.cost_price), 0); },
         activeFinalTotal() { return this.activeCalcResult.total + this.activeMaterialTotal; },
         activeFinalUnitTotal() { return this.activeAssembly.quantity > 0 ? (this.activeFinalTotal / this.activeAssembly.quantity) : 0; },
 
         allCalculations() {
           return this.assemblies.map(asm => {
             const result = this.calculateAssembly(asm);
-            const materialTotal = asm.addedMaterials.reduce((sum, item) => sum + (item.qty * (item.cost_price || 0)), 0);
-            const materialSellTotal = asm.addedMaterials.reduce((sum, item) => sum + (item.qty * (item.sell_price || 0)), 0);
-            const finalTotal = result.total + materialTotal; // 總成本
-            
-            // 單項最終賣價計算：(加工與紙成本 * 預估利潤率) + 物料自訂賣價總額
+            const materialTotal = asm.addedMaterials.reduce((sum, m) => sum + (m.qty * m.cost_price), 0);
+            const materialSellTotal = asm.addedMaterials.reduce((sum, m) => sum + (m.qty * m.sell_price), 0);
+            const finalTotal = result.total + materialTotal;
             const processCostWithProfit = result.total * (1 + (this.profitMargin/100));
             const quoteTotalSell = processCostWithProfit + materialSellTotal;
-            const quoteUnitSell = asm.quantity > 0 ? (quoteTotalSell / asm.quantity) : 0;
-
-            return { result, materialTotal, materialSellTotal, finalTotal, finalSellTotal: quoteTotalSell, quoteTotalSell, quoteUnitSell, finalUnitTotal: asm.quantity > 0 ? (finalTotal / asm.quantity) : 0 };
+            return { result, materialTotal, materialSellTotal, finalTotal, finalSellTotal: quoteTotalSell, quoteTotalSell, quoteUnitSell: asm.quantity > 0 ? (quoteTotalSell / asm.quantity) : 0, finalUnitTotal: asm.quantity > 0 ? (finalTotal / asm.quantity) : 0 };
           });
         },
-        grandTotalCost() { return this.allCalculations.reduce((sum, calc) => sum + calc.finalTotal, 0); },
-        grandProfitAmount() { return this.allCalculations.reduce((sum, calc) => sum + calc.result.total, 0) * (this.profitMargin / 100); },
-        grandMaterialProfit() { return this.allCalculations.reduce((sum, calc) => sum + (calc.materialSellTotal - calc.materialTotal), 0); },
+        grandTotalCost() { return this.allCalculations.reduce((sum, c) => sum + c.finalTotal, 0); },
+        grandProfitAmount() { return this.allCalculations.reduce((sum, c) => sum + c.result.total, 0) * (this.profitMargin / 100); },
+        grandMaterialProfit() { return this.allCalculations.reduce((sum, c) => sum + (c.materialSellTotal - c.materialTotal), 0); },
         grandFinalQuote() { return this.grandTotalCost + this.grandProfitAmount + this.grandMaterialProfit; }
       },
+      watch: {
+        activeTab() { this.renderBarcodes(); },
+        'activeAssembly.addedMaterials': { handler() { this.renderBarcodes(); }, deep: true }
+      },
       mounted() {
-        this.fetchSettings();
-        this.fetchMaterials();
-        this.fetchCustomers();
-        this.generateEstimateNo();
+        this.fetchSettings(); this.fetchMaterials(); this.fetchCustomers(); this.generateEstimateNo();
         setInterval(() => { this.currentDateTime = new Date().toLocaleString('zh-TW'); }, 1000);
       },
       methods: {
         addAssembly() { this.assemblies.push(createDefaultAssembly(this.assemblies.length + 1)); this.activeTab = this.assemblies.length - 1; },
-        removeAssembly(index) {
-          if (this.assemblies.length <= 1) return alert('至少需保留一個總成');
-          if(confirm(`確定要刪除「${this.assemblies[index].name}」嗎？`)) {
-            this.assemblies.splice(index, 1);
-            if (this.activeTab >= this.assemblies.length) this.activeTab = this.assemblies.length - 1;
-          }
-        },
+        removeAssembly(index) { if (this.assemblies.length > 1 && confirm(`刪除「${this.assemblies[index].name}」？`)) { this.assemblies.splice(index, 1); if (this.activeTab >= this.assemblies.length) this.activeTab = this.assemblies.length - 1; } },
         startEditingTab(index) { this.editingTabIndex = index; },
+
+        applyPaperSpec(e) {
+          const oz = Number(e.target.value);
+          const spec = paperLookup.find(p => p.oz === oz);
+          if(spec) { this.activeAssembly.thickness = spec.thickness; this.activeAssembly.sheetsPerTon = spec.sheets; }
+        },
 
         calculateAssembly(asm) {
           const qty = Number(asm.quantity) || 0;
-          const bw = Number(asm.boardW) || 0;
-          const bh = Number(asm.boardH) || 0;
-          const mw = Number(asm.marginW) || 0;
-          const mh = Number(asm.marginH) || 0;
-          const colors = Number(asm.printColors) || 0;
-          const mods = Number(asm.printModules) || 1;
-
-          let res = { board: { type: '無', unit: 0, total: 0, desc: '', formula: '' }, outerDie: { unit: 0, total: 0 }, boardDie: { unit: 0, total: 0, desc: '' }, grooving: { unit: 0, total: 0 }, foil: { unit: 0, total: 0 }, print: { unit: 0, total: 0, reams: 0, sheets: 0 }, total: 0 };
-
+          const bw = Number(asm.boardW) || 0, bh = Number(asm.boardH) || 0;
+          const mw = Number(asm.marginW) || 0, mh = Number(asm.marginH) || 0;
+          let res = { board: { type: '無', unit: 0, total: 0, desc: '', formula: '' }, outerDie: { total: 0 }, boardDie: { total: 0, desc: '' }, grooving: { total: 0 }, foil: { total: 0 }, print: { total: 0 }, total: 0 };
           if (qty <= 0) return res;
 
           if (bw > 0 && bh > 0) {
-            // 加入留邊計算
             const getMods = (pw, ph) => Math.max(Math.floor(pw / (bw+mw)) * Math.floor(ph / (bh+mh)), Math.floor(pw / (bh+mh)) * Math.floor(ph / (bw+mw)));
-            const fullMods = getMods(788, 1094);
-            const smallMods = getMods(720, 1000);
+            const fMods = getMods(788, 1094), sMods = getMods(720, 1000);
+            const sheets = asm.sheetsPerTon || this.settings.full_sheets; // 使用單成獨立設定的張數
+            const fPrice = asm.boardType === 'gray' ? this.settings.full_gray_price : this.settings.full_white_price;
+            const sPrice = asm.boardType === 'gray' ? this.settings.small_gray_price : this.settings.small_white_price;
             
-            const fullPrice = asm.boardType === 'gray' ? this.settings.full_gray_price : this.settings.full_white_price;
-            const smallPrice = asm.boardType === 'gray' ? this.settings.small_gray_price : this.settings.small_white_price;
-            
-            const fullCost = fullMods > 0 ? (fullPrice / this.settings.full_sheets / fullMods) : Infinity;
-            const smallCost = smallMods > 0 ? (smallPrice / this.settings.small_sheets / smallMods) : Infinity;
+            const fCost = fMods > 0 ? (fPrice / sheets / fMods) : Infinity;
+            const sCost = sMods > 0 ? (sPrice / sheets / sMods) : Infinity;
 
-            if (fullCost < Infinity || smallCost < Infinity) {
-              if (fullCost <= smallCost) {
-                res.board.type = '全紙 (788x1094)'; res.board.unit = fullCost; res.board.desc = `可切 ${fullMods} 模 (含留邊)`; res.board.formula = `$${fullPrice} ÷ ${this.settings.full_sheets}張 ÷ ${fullMods}模`;
-              } else {
-                res.board.type = '小板紙 (720x1000)'; res.board.unit = smallCost; res.board.desc = `可切 ${smallMods} 模 (含留邊)`; res.board.formula = `$${smallPrice} ÷ ${this.settings.small_sheets}張 ÷ ${smallMods}模`;
-              }
+            if (fCost < Infinity || sCost < Infinity) {
+              if (fCost <= sCost) { res.board.type = '全紙'; res.board.unit = fCost; res.board.desc = `${fMods}模(含邊)`; res.board.formula = `$${fPrice}÷${sheets}張÷${fMods}模`; } 
+              else { res.board.type = '小板'; res.board.unit = sCost; res.board.desc = `${sMods}模(含邊)`; res.board.formula = `$${sPrice}÷${sheets}張÷${sMods}模`; }
               res.board.total = res.board.unit * qty;
             }
           }
-
           if (asm.needOuterDie) res.outerDie.total = qty < 1000 ? 1650 : 1.65 * qty;
-          if (asm.boardDieType === 'chengsheng') { res.boardDie.total = qty < 1000 ? 1650 : 1.65 * qty; res.boardDie.desc = '宸昇軋型'; }
-          else if (asm.boardDieType === 'jiuyu') { res.boardDie.total = qty < 1000 ? 1000 : 1.0 * qty; res.boardDie.desc = '久昱代軋'; }
+          if (asm.boardDieType === 'chengsheng') { res.boardDie.total = qty < 1000 ? 1650 : 1.65 * qty; res.boardDie.desc = '宸昇軋'; } else if (asm.boardDieType === 'jiuyu') { res.boardDie.total = qty < 1000 ? 1000 : 1.0 * qty; res.boardDie.desc = '久昱軋'; }
           if (asm.needGrooving) res.grooving.total = qty < 1000 ? 2000 : 2.0 * qty;
           if (asm.needFoil) res.foil.total = qty < 1000 ? 2500 : 2.5 * qty;
-          if (asm.needPrint && mods > 0 && colors > 0) {
-            res.print.sheets = qty / mods;
-            res.print.reams = Math.ceil(res.print.sheets / 500);
-            res.print.total = res.print.reams * colors * 400;
+          if (asm.needPrint && asm.printModules > 0 && asm.printColors > 0) {
+            res.print.reams = Math.ceil((qty / asm.printModules) / 500);
+            res.print.total = res.print.reams * asm.printColors * 400;
           }
-
           res.total = res.board.total + (res.outerDie.total||0) + (res.boardDie.total||0) + (res.grooving.total||0) + (res.foil.total||0) + (res.print.total||0);
           return res;
         },
 
-        async fetchSettings() {
-          try {
-            const { data, error } = await supabaseClient.from('app_settings').select('*').eq('id', 1).maybeSingle();
-            if (error) throw error;
-            if (data) { this.settings = {...this.settings, ...data}; this.dbConnected = true; }
-          } catch (error) { console.error("連線失敗:", error); }
-        },
-        async saveSettingsToDB() {
-          try {
-            const payload = { id: 1, ...this.settings };
-            const { error } = await supabaseClient.from('app_settings').upsert(payload);
-            if (error) throw error;
-            alert('✅ 設定儲存成功！');
-            this.dbConnected = true;
-          } catch (error) { alert('儲存失敗: ' + error.message); }
-        },
-        async fetchMaterials() {
-          try {
-            const { data, error } = await supabaseClient.from('materials').select('*');
-            if (error) throw error;
-            this.dbMaterials = data || [];
-          } catch (error) { console.error("載入物料表失敗:", error); }
-        },
-        async fetchCustomers() {
-          try {
-            const { data, error } = await supabaseClient.from('customers').select('*');
-            if (error) throw error;
-            this.dbCustomers = data || [];
-            this.myCompany = this.dbCustomers.find(c => c.customer_id === 'C00000000');
-          } catch (error) { console.error("載入客戶表失敗:", error); }
+        async fetchSettings() { const { data } = await supabaseClient.from('app_settings').select('*').eq('id', 1).maybeSingle(); if (data) this.settings = {...this.settings, ...data}; },
+        async saveSettingsToDB() { await supabaseClient.from('app_settings').upsert({ id: 1, ...this.settings }); alert('✅ 儲存成功'); },
+        async fetchMaterials() { const { data } = await supabaseClient.from('materials').select('*'); if(data) this.dbMaterials = data; },
+        async fetchCustomers() { 
+          const { data } = await supabaseClient.from('customers').select('*'); 
+          if(data) { this.dbCustomers = data; this.myCompany = data.find(c => c.tax_id === 'C00000000'); }
         },
 
-        // --- Logo Base64 ---
-        handleLogoUpload(e) {
-          const file = e.target.files[0];
-          if(!file) return;
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-              canvas.width = 200; canvas.height = 200;
-              // 保持比例置中
-              const ratio = Math.min(200 / img.width, 200 / img.height);
-              const nw = img.width * ratio, nh = img.height * ratio;
-              ctx.drawImage(img, (200-nw)/2, (200-nh)/2, nw, nh);
-              this.settings.company_logo = canvas.toDataURL('image/png');
-              this.saveSettingsToDB(); // 直接儲存
-            };
-            img.src = event.target.result;
-          };
-          reader.readAsDataURL(file);
+        handleReferenceUpload(e) {
+          const files = Array.from(e.target.files).slice(0, 2 - this.referenceImages.length);
+          files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (ev) => this.referenceImages.push(ev.target.result);
+            reader.readAsDataURL(file);
+          });
+          e.target.value = null; // reset
         },
 
-        initNewOrder() {
-          if(!confirm("確定要開啟新單嗎？未儲存資料將會遺失。")) return;
-          this.assemblies = [createDefaultAssembly(1)];
-          this.activeTab = 0;
-          this.profitMargin = 20;
-          this.searchOrderNo = "";
-          this.quoteCustomer = null;
-          this.generateEstimateNo();
-        },
-
+        initNewOrder() { if(!confirm("確定開新單？")) return; this.assemblies = [createDefaultAssembly(1)]; this.activeTab = 0; this.profitMargin = 20; this.searchOrderNo = ""; this.quoteCustomer = null; this.referenceImages = []; this.generateEstimateNo(); },
         async generateEstimateNo() {
-          const now = new Date();
-          const yy = now.getFullYear().toString().slice(-2);
-          const mm = (now.getMonth() + 1).toString().padStart(2, '0');
-          const prefix = `T${yy}${mm}`;
-          try {
-            const { data } = await supabaseClient.from('estimates').select('estimate_no').like('estimate_no', `${prefix}%`).order('estimate_no', { ascending: false }).limit(1).maybeSingle();
-            if (data && data.estimate_no) {
-              const lastNum = parseInt(data.estimate_no.slice(-3));
-              this.estimateNo = `${prefix}${(lastNum + 1).toString().padStart(3, '0')}`;
-            } else { this.estimateNo = `${prefix}001`; }
-          } catch (e) { this.estimateNo = `${prefix}001`; }
+          const prefix = `T${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}`;
+          const { data } = await supabaseClient.from('estimates').select('estimate_no').like('estimate_no', `${prefix}%`).order('estimate_no', { ascending: false }).limit(1).maybeSingle();
+          this.estimateNo = `${prefix}${data && data.estimate_no ? (parseInt(data.estimate_no.slice(-3)) + 1).toString().padStart(3, '0') : '001'}`;
         },
-        
         async loadEstimateFromDB() {
-          const queryNo = this.searchOrderNo.trim().toUpperCase();
-          if (!queryNo) return alert('請先輸入單號！');
-          try {
-            const { data, error } = await supabaseClient.from('estimates').select('*').eq('estimate_no', queryNo).maybeSingle();
-            if (error) throw error;
-            if (data) {
-              this.estimateNo = data.estimate_no;
-              this.profitMargin = data.details.profit_margin || 20;
-              this.quoteCustomer = data.details.quote_customer || null;
-              this.assemblies = data.details.assemblies.map(a => a.params);
-              this.activeTab = 'summary';
-              alert(`✅ 成功調閱單號: ${this.estimateNo}`);
-            } else { alert(`找不到單號 ${queryNo}`); }
-          } catch (error) { alert('調閱失敗: ' + error.message); }
+          const qNo = this.searchOrderNo.trim().toUpperCase();
+          if (!qNo) return;
+          const { data } = await supabaseClient.from('estimates').select('*').eq('estimate_no', qNo).maybeSingle();
+          if (data) {
+            this.estimateNo = data.estimate_no; this.profitMargin = data.details.profit_margin || 20; this.quoteCustomer = data.details.quote_customer; this.assemblies = data.details.assemblies.map(a => a.params); this.referenceImages = data.details.referenceImages || []; this.activeTab = 'quote'; alert(`✅ 成功調閱: ${this.estimateNo}`);
+          } else alert(`找不到 ${qNo}`);
         },
-
         async saveEstimateToDB() {
           const payload = {
-            estimate_no: this.estimateNo,
-            quantity: this.assemblies.reduce((sum, asm) => sum + (Number(asm.quantity)||0), 0),
-            total_amount: this.grandFinalQuote,
-            details: {
-              profit_margin: this.profitMargin,
-              quote_customer: this.quoteCustomer,
-              assemblies: this.assemblies.map((asm, idx) => ({
-                name: asm.name, params: asm, calculation: this.allCalculations[idx]
-              }))
-            }
+            estimate_no: this.estimateNo, quantity: this.assemblies.reduce((sum, a) => sum + (Number(a.quantity)||0), 0), total_amount: this.grandFinalQuote,
+            details: { profit_margin: this.profitMargin, quote_customer: this.quoteCustomer, referenceImages: this.referenceImages, assemblies: this.assemblies.map((a, i) => ({ name: a.name, params: a, calc: this.allCalculations[i] })) }
           };
-          try {
-            const { error } = await supabaseClient.from('estimates').upsert(payload);
-            if (error) throw error;
-            alert(`✅ 專案報價儲存成功！單號: ${this.estimateNo}\n(若為舊單調閱，已直接覆蓋更新)`);
-          } catch (error) { alert('儲存失敗: ' + error.message); }
+          await supabaseClient.from('estimates').upsert(payload); alert(`✅ 儲存成功！單號: ${this.estimateNo}`);
         },
 
-        selectCustomer(c) {
-          this.quoteCustomer = c;
-          this.isCustomerDropdownOpen = false;
-          this.customerSearchQuery = "";
-        },
-        selectMaterial(mat) {
-          this.selectedMaterial = mat;
-          this.matTempCost = mat.cost_price || 0;
-          this.matTempSell = mat.sell_price || 0;
-          this.matTempRemark = "";
-          this.matTempQty = 1;
-          this.materialSearchQuery = "";
-          this.isMaterialDropdownOpen = false;
-        },
-        closeDropdowns() {
-          setTimeout(() => { this.isMaterialDropdownOpen = false; this.isCustomerDropdownOpen = false; }, 150);
-        },
+        selectCustomer(c) { this.quoteCustomer = c; this.isCustomerDropdownOpen = false; this.customerSearchQuery = ""; },
+        selectMaterial(mat) { this.selectedMaterial = mat; this.matTempCost = mat.cost_price||0; this.matTempSell = mat.sell_price||0; this.matTempRemark = ""; this.matTempQty = 1; this.materialSearchQuery = ""; this.isMaterialDropdownOpen = false; },
+        closeDropdowns() { setTimeout(() => { this.isMaterialDropdownOpen = false; this.isCustomerDropdownOpen = false; }, 150); },
         addMaterialToList() {
-          if (!this.selectedMaterial) return alert('請選擇物料');
-          this.activeAssembly.addedMaterials.push({ 
-            ...this.selectedMaterial, 
-            qty: this.matTempQty,
-            cost_price: this.matTempCost,
-            sell_price: this.matTempSell,
-            remark: this.matTempRemark
-          });
-          this.selectedMaterial = null;
+          if (!this.selectedMaterial) return;
+          this.activeAssembly.addedMaterials.push({ ...this.selectedMaterial, qty: this.matTempQty, cost_price: this.matTempCost, sell_price: this.matTempSell, remark: this.matTempRemark });
+          this.selectedMaterial = null; this.renderBarcodes();
         },
-        removeMaterial(index) { this.activeAssembly.addedMaterials.splice(index, 1); },
-
+        removeMaterial(idx) { this.activeAssembly.addedMaterials.splice(idx, 1); },
+        renderBarcodes() {
+          nextTick(() => document.querySelectorAll('.barcode-svg').forEach(svg => {
+            const val = svg.getAttribute('data-value');
+            if(val) try { JsBarcode(svg, val, { format: "CODE128", height: 24, displayValue: true, fontSize: 10, margin: 2, width: 1.2 }); } catch (e) { svg.outerHTML = `<div class="text-[10px]">ID:${val}</div>`; }
+          }));
+        },
         formatMoney(num) { return Number((num||0).toFixed(2)).toString(); },
-        
         handleExportPDFQuote() {
           if (!window.html2pdf) return alert('PDF 模組準備中...');
           const element = document.getElementById('quote-report-content');
-          window.html2pdf().set({
-            margin: 10, filename: `正式報價單_${this.estimateNo}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-          }).from(element).save();
+          window.html2pdf().set({ margin: 0, filename: `報價單_${this.estimateNo}.pdf`, image: { type: 'jpeg', quality: 1.0 }, html2canvas: { scale: 3, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save();
         }
       }
     }).mount('#app');
