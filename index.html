@@ -891,7 +891,7 @@
             const element = document.getElementById('quote-report-content');
             window.html2pdf().set({ margin: 0, filename: `報價單_${this.estimateNo}.pdf`, image: { type: 'jpeg', quality: 1.0 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save();
           }, 300);
-        }
+        },
         handleExportPDFSummary() {
           if (!window.html2pdf) return alert('PDF 模組準備中...');
           this.renderBarcodes();
@@ -906,6 +906,7 @@
             }).from(element).save();
           }, 300);
         },
+        
       }
     }).mount('#app');
   </script>
