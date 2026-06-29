@@ -251,13 +251,25 @@
             <div class="space-y-3 mb-6 text-sm">
               <h3 class="font-bold text-moText border-l-4 border-moPrimary pl-2 mb-2">內部成本與毛利解析 (單項)</h3>
               
-              <div class="flex justify-between p-2 bg-moLight rounded border border-moBorder">
-                <span class="font-bold text-moText">紙板與印刷</span>
-                <div class="text-right text-xs">
-                  <span class="text-gray-500">成: ${{ formatMoney(activeCalcResult.paperAndPrintCost) }}</span>
-                  <span class="text-blue-500 ml-2">賣: ${{ formatMoney(activeCalcResult.paperAndPrintCost * (1 + profitMargin/100)) }}</span>
-                  <span class="text-green-600 font-bold ml-2">利: ${{ formatMoney(activeCalcResult.paperAndPrintCost * (profitMargin/100)) }}</span>
+              <div class="p-3 bg-moLight rounded border border-moBorder space-y-2">
+                <div class="flex justify-between font-bold text-moText">
+                  <span>紙板成本精算</span>
+                  <span class="text-moPrimary font-black">${{ formatMoney(activeCalcResult.board.total) }}</span>
                 </div>
+                <div class="text-xs text-gray-500 space-y-1 bg-white p-2 rounded border border-gray-100 font-mono">
+                  <p>🔹 系統選用尺寸：<span class="text-blue-700 font-bold">{{ activeCalcResult.board.paperSize }}</span></p>
+                  <p>🔹 原始大張單價：<span class="text-gray-700">${{ activeCalcResult.board.singleSheetCost.toFixed(2) }}</span> / 張</p>
+                  <p>🔹 切開單模成本：<span class="text-red-600 font-bold">${{ activeCalcResult.board.perModCost.toFixed(4) }}</span> / 組</p>
+                  <p>🔹 開數算式明細：{{ activeCalcResult.board.desc }} &rarr; {{ activeCalcResult.board.formula }}</p>
+                </div>
+              </div>
+
+              <div v-if="activeCalcResult.print.total > 0" class="p-3 bg-moLight rounded border border-moBorder space-y-1">
+                <div class="flex justify-between font-bold text-moText">
+                  <span>印刷成本（含放損）</span>
+                  <span class="font-bold text-moPrimary">${{ formatMoney(activeCalcResult.print.total) }}</span>
+                </div>
+                <p class="text-[11px] text-gray-400 font-mono pl-1" v-html="activeCalcResult.print.formula"></p>
               </div>
               
               <div v-if="activeAssembly.outerDie.checked" class="flex justify-between p-2 bg-moLight rounded border border-moBorder">
@@ -365,9 +377,11 @@
                   <tr v-for="(asm, idx) in assemblies" :key="asm.id" class="border-b border-moBorder hover:bg-gray-50">
                     <td class="p-3 font-bold text-moText">
                       {{ asm.name }}
-                      <div class="text-[10px] text-gray-500 font-normal mt-1">
-                        {{asm.boardW}}x{{asm.boardH}}mm | {{asm.boardType==='gray'?'灰紙':'白紙'}} ({{asm.thickness}}mm)
-                      </div>
+                      <div class="text-[10px] text-gray-600 font-normal mt-1 bg-moLight p-2 rounded border space-y-0.5 font-mono">
+                      <p>📏 實體開料: {{asm.boardW}}x{{asm.boardH}}mm (厚 {{asm.thickness}}mm, 留邊+{{asm.marginW}}/+{{asm.marginH}}mm)</p>
+                      <p>📦 系統選用: <span class="text-blue-700 font-bold">{{ allCalculations[idx].result.board.paperSize }}</span> ({{ allCalculations[idx].result.board.desc }})</p>
+                      <p>💰 精算單價: 大張 ${{ allCalculations[idx].result.board.singleSheetCost.toFixed(2) }} / 單模 ${{ allCalculations[idx].result.board.perModCost.toFixed(4) }}</p>
+                    </div>
                       <div class="mt-1" v-if="asm.addedMaterials.length > 0">
                         <table class="w-full border border-gray-200 text-[10px] mt-1 bg-white">
                           <tbody><tr v-for="mat in asm.addedMaterials" class="border-t border-gray-100"><td class="p-1 font-mono text-gray-400 w-16"><svg class="barcode-svg" :data-value="mat.material_id" data-height="15" data-width="1" data-fontsize="8"></svg></td><td class="p-1">[{{mat.remark}}] {{mat.material_name}}</td><td class="p-1 text-center font-bold">{{mat.qty}}</td></tr></tbody>
@@ -696,20 +710,20 @@
         },
 
         calculateAssembly(asm) {
-          const baseQty = Number(asm.quantity) || 0; // 對外報價的基數數量
+          const baseQty = Number(asm.quantity) || 0; 
           const yieldRate = Number(this.settings.yield_rate) || 100;
-          const calcQty = Math.ceil(baseQty / (yieldRate / 100)); // 實際內部算料量
+          const calcQty = Math.ceil(baseQty / (yieldRate / 100)); 
           
           const bw = Number(asm.boardW) || 0, bh = Number(asm.boardH) || 0;
           const mw = Number(asm.marginW) || 0, mh = Number(asm.marginH) || 0;
           let res = { 
-            board: { type: '無', unit: 0, total: 0, desc: '', formula: '' }, 
+            board: { type: '無', unit: 0, total: 0, desc: '', formula: '', paperSize: '未選用', singleSheetCost: 0, perModCost: 0 }, 
             outerDie: { cost: 0, sell: 0 }, 
             boardDie: { type: 'none', cost: 0, sell: 0, desc: '' }, 
             grooving: { cost: 0, sell: 0 }, 
             foil: { cost: 0, sell: 0 }, 
             customProcessList: [], 
-            print: { total: 0, reams: 0 }, 
+            print: { total: 0, reams: 0, formula: '' }, 
             paperAndPrintCost: 0,
             processingCost: 0,
             processingSell: 0,
@@ -718,7 +732,7 @@
           
           if (calcQty <= 0) return res;
 
-          // 紙板計算 (內部算料量)
+          // 紙板精算
           if (bw > 0 && bh > 0) {
             const getMods = (pw, ph) => Math.max(Math.floor(pw / (bw+mw)) * Math.floor(ph / (bh+mh)), Math.floor(pw / (bh+mh)) * Math.floor(ph / (bw+mw)));
             const fMods = getMods(788, 1094), sMods = getMods(720, 1000);
@@ -726,35 +740,51 @@
             const fPrice = asm.boardType === 'gray' ? this.settings.full_gray_price : this.settings.full_white_price;
             const sPrice = asm.boardType === 'gray' ? this.settings.small_gray_price : this.settings.small_white_price;
             
-            const fCost = fMods > 0 ? (fPrice / sheets / fMods) : Infinity;
-            const sCost = sMods > 0 ? (sPrice / sheets / sMods) : Infinity;
+            // 算出每一大張全紙或小板紙的進貨成本 (噸價 ÷ 每噸張數)
+            const fSingleCost = fPrice / sheets;
+            const sSingleCost = sPrice / sheets;
+
+            // 攤提到每一模的單張成本
+            const fCost = fMods > 0 ? (fSingleCost / fMods) : Infinity;
+            const sCost = sMods > 0 ? (sSingleCost / sMods) : Infinity;
 
             if (fCost < Infinity || sCost < Infinity) {
-              if (fCost <= sCost) { res.board.type = '全紙'; res.board.unit = fCost; res.board.desc = `${fMods}模(含留邊)`; res.board.formula = `$${fPrice}÷${sheets}張÷${fMods}模`; } 
-              else { res.board.type = '小板'; res.board.unit = sCost; res.board.desc = `${sMods}模(含留邊)`; res.board.formula = `$${sPrice}÷${sheets}張÷${sMods}模`; }
-              res.board.total = res.board.unit * calcQty;
+              if (fCost <= sCost) { 
+                res.board.type = '全紙'; 
+                res.board.paperSize = '全紙 (788x1094mm)';
+                res.board.singleSheetCost = fSingleCost;
+                res.board.perModCost = fCost;
+                res.board.desc = `${fMods}模(含邊)`; 
+                res.board.formula = `大張成本: $${fSingleCost.toFixed(2)} (${fPrice}÷${sheets}張) ÷ ${fMods}模 = 每模: $${fCost.toFixed(4)}`; 
+              } else { 
+                res.board.type = '小板'; 
+                res.board.paperSize = '小板紙 (720x1000mm)';
+                res.board.singleSheetCost = sSingleCost;
+                res.board.perModCost = sCost;
+                res.board.desc = `${sMods}模(含邊)`; 
+                res.board.formula = `大張成本: $${sSingleCost.toFixed(2)} (${sPrice}÷${sheets}張) ÷ ${sMods}模 = 每模: $${sCost.toFixed(4)}`; 
+              }
+              res.board.total = res.board.perModCost * calcQty;
             }
           }
           
-          // 印刷計算 (內部算料量)
+          // 印刷計算
           if (asm.needPrint && asm.printModules > 0 && asm.printColors > 0) {
             res.print.reams = Math.ceil((calcQty / asm.printModules) / 500);
             res.print.total = res.print.reams * asm.printColors * 400;
+            res.print.formula = `實際生產 ${(calcQty / asm.printModules).toFixed(0)} 張印件 &rarr; 共 ${res.print.reams} 令 x ${asm.printColors}色 x $400`;
           }
           
           res.paperAndPrintCost = res.board.total + res.print.total;
 
-          // 加工內外價計算 (單價 x 投產量=成本 / 單價 x 報價量=外價)
           if (asm.outerDie && asm.outerDie.checked) { res.outerDie.cost = (Number(asm.outerDie.cost)||0)*calcQty; res.outerDie.sell = (Number(asm.outerDie.sell)||0)*baseQty; }
-          if (asm.boardDie && asm.boardDie.type !== 'none') { res.boardDie.cost = (Number(asm.boardDie.cost)||0)*calcQty; res.boardDie.sell = (Number(asm.boardDie.sell)||0)*baseQty; res.boardDie.desc = asm.boardDie.type === 'chengsheng' ? '宸昇軋' : '久昱軋'; }
+          if (asm.boardDie && asm.boardDie.type !== 'none') { res.boardDie.cost = (Number(asm.boardDie.cost)||0)*calcQty; res.boardDie.sell = (Number(asm.boardDie.sell)||0)*baseQty; res.boardDie.desc = asm.boardDie.type === 'chengsheng' ? '宸昇軋' : '久昱代墊/軋'; }
           if (asm.grooving && asm.grooving.checked) { res.grooving.cost = (Number(asm.grooving.cost)||0)*calcQty; res.grooving.sell = (Number(asm.grooving.sell)||0)*baseQty; }
           if (asm.foil && asm.foil.checked) { res.foil.cost = (Number(asm.foil.cost)||0)*calcQty; res.foil.sell = (Number(asm.foil.sell)||0)*baseQty; }
           
           let cpCost = 0, cpSell = 0;
           (asm.customProcesses || []).forEach(cp => { 
-            let c = (Number(cp.cost)||0)*calcQty; 
-            let s = (Number(cp.sell)||0)*baseQty; 
-            cpCost += c; cpSell += s;
+            let c = (Number(cp.cost)||0)*calcQty; let s = (Number(cp.sell)||0)*baseQty; cpCost += c; cpSell += s;
             res.customProcessList.push({name: cp.name, cost: c, sell: s});
           });
 
