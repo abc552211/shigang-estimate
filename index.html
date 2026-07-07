@@ -32,17 +32,48 @@
     [v-cloak] { display: none; }
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    /* 🌟 拔除 min-height: 297mm，防止像素誤差觸發空白第二頁 */
     .pdf-container { width: 210mm; background: white; margin: 0 auto; box-sizing: border-box; padding: 15mm; display: flex; flex-direction: column; }
-    .print-avoid-break { page-break-inside: avoid; }
-    @media print { .no-print { display: none !important; } }
+    .pdf-summary-container { width: 277mm; background: white; margin: 0 auto; box-sizing: border-box; padding: 10mm; display: flex; flex-direction: column; }
+    .print-avoid-break { page-break-inside: avoid; break-inside: avoid; }
+    .print-allow-break { page-break-inside: auto; break-inside: auto; }
+    
+    /* 🌟 全新升級：強化的 PDF 向量列印樣式，完美支援無損輸出與文字複製 */
+    @media print { 
+      .no-print { display: none !important; } 
+      body { 
+          background-color: white !important; 
+          -webkit-print-color-adjust: exact; 
+          print-color-adjust: exact; /* 強制輸出所有背景色與標籤色 */
+      }
+      #app { padding: 0 !important; margin: 0 !important; }
+      .max-w-6xl { max-width: 100% !important; margin: 0 !important; }
+      
+      /* 將固定毫米轉為 100% 寬度，讓瀏覽器紙張大小完美接管，避免白邊與溢出 */
+      .pdf-container, .pdf-summary-container { 
+          width: 100% !important; 
+          padding: 0 !important; 
+          margin: 0 !important; 
+      }
+      
+      /* 移除卡片的立體陰影與圓角，讓 PDF 像真實紙張般平整 */
+      .bg-moCard { 
+          border: none !important; 
+          box-shadow: none !important; 
+          padding: 0 !important; 
+          background: transparent !important; 
+          border-radius: 0 !important;
+      }
+      
+      /* 確保在 PDF 輸出時表格不會被裁剪 */
+      .overflow-x-auto { overflow: visible !important; }
+    }
   </style>
 </head>
 <body class="bg-moBg text-moText">
   <div id="app" class="min-h-screen p-4 md:p-8 font-sans" v-cloak @click="closeDropdowns">
-    <div class="max-w-6xl mx-auto no-print">
+    <div class="max-w-6xl mx-auto">
       
-      <div class="bg-moLight border-l-4 border-moPrimary p-4 mb-4 rounded-lg shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="bg-moLight border-l-4 border-moPrimary p-4 mb-4 rounded-lg shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
         <div class="flex items-center space-x-4">
           <div>
             <p class="text-moPrimary font-bold text-sm md:text-base tracking-wide">雲端初算與報價系統</p>
@@ -64,7 +95,7 @@
         </div>
       </div>
 
-      <div class="flex space-x-1 mb-6 overflow-x-auto pb-2 border-b-2 border-moBorder">
+      <div class="flex space-x-1 mb-6 overflow-x-auto pb-2 border-b-2 border-moBorder no-print">
         <button v-for="(asm, index) in assemblies" :key="asm.id" @click="activeTab = index" @dblclick="startEditingTab(index)" class="px-4 py-2 rounded-t-lg font-bold text-sm transition-colors whitespace-nowrap min-w-[120px] flex items-center justify-center group relative" :class="activeTab === index ? 'bg-moText text-white' : 'bg-moBorder text-gray-500 hover:bg-gray-300'">
           <input v-if="editingTabIndex === index" v-model="asm.name" @blur="editingTabIndex = -1" @keyup.enter="editingTabIndex = -1" class="text-black px-1 rounded w-24 text-center text-sm absolute z-10 top-1.5" autofocus />
           <span v-else class="flex items-center">{{ asm.name }}</span>
@@ -77,7 +108,7 @@
         <button @click="activeTab = 'summary'" class="px-5 py-2 rounded-t-lg font-black text-sm transition-colors whitespace-nowrap tracking-widest ml-1" :class="activeTab === 'summary' ? 'bg-moAccent text-white shadow-inner' : 'bg-moLight text-moAccent border border-moBorder border-b-0 hover:bg-gray-100'">📊 毛利估算表明細</button>
       </div>
 
-      <div v-if="typeof activeTab === 'number'" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div v-if="typeof activeTab === 'number'" class="grid grid-cols-1 lg:grid-cols-12 gap-8 no-print">
         <div class="lg:col-span-5 space-y-6">
           
           <div class="bg-moCard p-6 rounded-2xl shadow-sm border border-moBorder">
@@ -337,7 +368,7 @@
               <template v-for="(mat, idx) in activeAssembly.addedMaterials" :key="mat.material_id">
               <div v-if="mat.category !== '印刷加工'"
                     class="bg-white rounded-xl border border-moBorder shadow-sm flex flex-col w-full overflow-hidden">
-                 
+                    
                 
                 <div class="bg-[#F0F2F1] px-3 py-1.5 border-b border-moBorder flex items-center justify-between gap-4 w-full">
                   <div class="flex items-center space-x-2 min-w-0 flex-1">
@@ -402,7 +433,7 @@
 
       <div v-show="activeTab === 'quote'" class="space-y-6">
         
-        <div class="bg-moCard p-4 rounded-xl shadow-sm border border-moBorder flex flex-col gap-4">
+        <div class="bg-moCard p-4 rounded-xl shadow-sm border border-moBorder flex flex-col gap-4 no-print">
           <div class="flex flex-wrap gap-4 justify-between items-center w-full pb-4 border-b border-moBorder no-print">
             <div class="flex items-center space-x-4 w-full md:w-auto">
               <div class="relative flex-1 md:flex-none">
@@ -424,7 +455,7 @@
                 <input type="file" class="hidden" accept="image/*" @change="handleLogoUpload">
               </label>
               <button @click="saveEstimateToDB" class="px-4 py-1.5 bg-moAccent text-white font-bold rounded hover:bg-moAccentHover whitespace-nowrap">儲存資料</button>
-              <button @click="handleExportPDFQuote" class="px-4 py-1.5 bg-moText text-white font-bold rounded hover:bg-gray-700 whitespace-nowrap">匯出 PDF</button>
+              <button @click="handleExportPDFQuote" class="px-4 py-1.5 bg-moText text-white font-bold rounded hover:bg-gray-700 whitespace-nowrap">匯出向量 PDF</button>
             </div>
           </div>
           
@@ -501,7 +532,7 @@
               <tbody>
                   <template v-for="(asm, idx) in assemblies" :key="asm.id">
                     
-                    <tr class="bg-gray-50/40">
+                    <tr class="bg-gray-50/40 print-avoid-break">
                       <td class="border border-black p-1 text-center align-top font-bold pt-1.5">{{ idx + 1 }}</td>
                       <td class="border border-black p-1.5 leading-relaxed">
                         <p class="font-bold text-[12px] text-slate-900">{{ asm.name }}</p>
@@ -517,7 +548,7 @@
                       <td class="border border-black p-1 text-right font-bold align-top pt-1.5 font-mono">${{ formatMoneyInt(allCalculations[idx].paperPrintSell) }}</td>
                     </tr>
 
-                    <tr v-for="(mat, mIdx) in asm.addedMaterials" :key="'mat-'+mIdx" class="text-[11px] text-gray-700">
+                    <tr v-for="(mat, mIdx) in asm.addedMaterials" :key="'mat-'+mIdx" class="text-[11px] text-gray-700 print-avoid-break">
                       <td class="border border-black p-1 text-center text-gray-400 font-mono">{{ idx + 1 }}-{{ mIdx + 1 }}</td>
                       <td class="border border-black p-1.5 pl-4">
                         <span v-if="mat.remark" class="text-moAccent font-bold">[{{ mat.remark }}] </span>
@@ -535,7 +566,7 @@
                       </td>
                     </tr>
 
-                    <tr class="bg-gray-100/60">
+                    <tr class="bg-gray-100/60 print-avoid-break">
                       <td colspan="4" class="border border-black p-1.5 text-right font-bold text-[11px] text-gray-600 tracking-wider">
                         項次 {{ idx + 1 }} - 總成費用小計：
                       </td>
@@ -544,7 +575,7 @@
                       </td>
                     </tr>
 
-                    <tr v-if="idx === assemblies.length - 1 && globalShippingPrice > 0">
+                    <tr v-if="idx === assemblies.length - 1 && globalShippingPrice > 0" class="print-avoid-break">
                       <td colspan="4" class="border border-black p-1.5 text-right font-bold text-[11px] bg-slate-50">
                         🚚 運費：<span class="font-normal text-gray-500 italic text-[10px]">{{ globalShippingNote ? '(' + globalShippingNote + ')' : '(無特別備註)' }}</span>
                       </td>
@@ -556,7 +587,7 @@
                   </template>
                 </tbody>
             </table>
-
+          <div class="print-allow-break">
             <div class="flex justify-end mb-4 print-avoid-break">
               <div class="w-1/2">
                 <div class="flex justify-between font-bold text-[12px] border-b border-gray-300 pb-1 mb-1 text-gray-600">
@@ -570,6 +601,7 @@
                 </div>
               </div>
             </div>
+          </div>
           </div>
           
           <div class="mt-12 shrink-0 print-avoid-break">
@@ -599,15 +631,15 @@
       </div>
 
       <div v-show="activeTab === 'summary'" class="space-y-6">
-        <div class="bg-moCard p-8 rounded-2xl shadow-sm border border-moBorder">
+        <div class="bg-moCard p-8 rounded-2xl shadow-sm border border-moBorder overflow-x-auto">
            
            <div class="flex justify-end mb-4 no-print">
                <button @click="handleExportPDFSummary" class="px-4 py-1.5 bg-moPrimary text-white font-bold rounded hover:bg-moPrimaryHover shadow-sm text-xs transition-all no-print">
-                 🖨️ 匯出毛利估算表 PDF
+                 🖨️ 匯出向量毛利估算表 PDF
                </button>
            </div>
 
-           <div id="summary-report-content" class="bg-white p-2">
+           <div id="summary-report-content" class="pdf-summary-container">
              
              <div class="border-b-4 border-moText pb-3 mb-4 flex justify-between items-end shrink-0">
                <div>
@@ -650,7 +682,7 @@
              <table class="w-full text-left border-collapse text-sm mb-6 shadow-sm">
                <thead>
                  <tr class="bg-moLight text-moText border-b-2 border-gray-300">
-                   <th class="p-3 border-b border-moBorder">總成名稱與規格</th>
+                   <th class="p-3 border-b border-moBorder w-[40%]">總成名稱與規格</th>
                    <th class="p-3 border-b border-moBorder w-[30%]">內部成本明細</th>
                    <th class="p-3 border-b border-moBorder w-[30%]">對外報價與毛利</th>
                  </tr>
@@ -661,7 +693,7 @@
                      <div class="flex justify-between items-end mb-1">
                         <span class="text-base text-moPrimary">{{ asm.name }}</span>
                         <span class="text-xs text-gray-500 font-mono">
-                           交貨數量: <span class="font-bold text-slate-800">{{ asm.quantity }}</span>
+                            交貨數量: <span class="font-bold text-slate-800">{{ asm.quantity }}</span>
                            <span class="text-moAccent font-normal ml-1">/ 投產: {{ Math.ceil(asm.quantity / ((settings.yield_rate||100)/100)) }}</span>
                         </span>
                      </div>
@@ -678,12 +710,12 @@
                      </div>
                      
                      <div class="mt-2" v-if="asm.addedMaterials.length > 0">
-                       <table class="w-full border border-gray-300 text-[10px] bg-white print-avoid-break">
+                       <table class="w-full border border-gray-300 text-[10px] bg-white print-allow-break">
                          <thead>
                            <tr class="bg-gray-50 text-gray-500 font-bold text-[9px] border-b"><th class="p-1.5 w-16">料號條碼</th><th class="p-1.5 text-left">物料備註與品名規格</th><th class="p-1.5 text-center w-14">模式</th><th class="p-1.5 text-center w-12">數量</th></tr>
                          </thead>
                          <tbody>
-                           <tr v-for="mat in asm.addedMaterials" :key="mat.material_id" class="border-t border-gray-200 text-slate-700">
+                           <tr v-for="mat in asm.addedMaterials" :key="mat.material_id" class="border-t border-gray-200 text-slate-700 print-avoid-break">
                              <td class="p-1 font-mono text-gray-400 w-16" data-html2canvas-ignore="true">
                                <svg class="barcode-svg" :data-value="mat.material_id" data-height="12" data-width="0.9" data-fontsize="0" data-margin="0"></svg>
                              </td>
@@ -925,7 +957,6 @@
             
             const quoteTotalSell = paperPrintSell + materialSellTotal;
             
-           // 👇 主要是替換下面這個 return，加上 paperSell, printSell
             return { 
               result, materialTotal, materialSellTotal, finalTotal, paperPrintSell,
               paperSell, printSell, 
@@ -941,7 +972,6 @@
         grandProfitAmount() { 
           return this.allCalculations.reduce((sum, c) => sum + (c.result.board.total * (this.profitMargin / 100)) + (c.result.print.total * (this.printProfitMargin / 100)), 0); 
         },
-
 
         grandMaterialProfit() { return this.allCalculations.reduce((sum, c) => sum + (c.materialSellTotal - c.materialTotal), 0); },
         
@@ -1167,7 +1197,7 @@
           this.assemblies = [createDefaultAssembly(1)]; 
           this.activeTab = 0; 
           this.profitMargin = 40;
-          this.printProfitMargin = 40; // 新增這行 
+          this.printProfitMargin = 40;
           this.searchOrderNo = ""; 
           this.quoteCustomer = null; 
           this.referenceImages = []; 
@@ -1190,7 +1220,6 @@
           const qNo = this.searchOrderNo.trim().toUpperCase();
           if (!qNo) return;
           
-          // 加入 error 捕捉
           const { data, error } = await supabaseClient.from('estimates').select('*').eq('estimate_no', qNo).maybeSingle();
           
           if (error) {
@@ -1201,7 +1230,7 @@
           if (data) {
             this.estimateNo = data.estimate_no; 
             this.profitMargin = data.details.profit_margin || 40;
-            this.printProfitMargin = data.details.print_profit_margin || 40; // 新增這行 
+            this.printProfitMargin = data.details.print_profit_margin || 40; 
             this.quoteCustomer = data.details.quote_customer; 
             this.globalProductName = data.details.global_product_name || '';
             this.globalFinishedSize = data.details.global_finished_size || '';
@@ -1209,7 +1238,6 @@
             this.assemblies = data.details.assemblies.map(a => a.params); 
             this.referenceImages = data.details.referenceImages || []; 
             
-            // 🌟 從 details 安全還原運費，避免與外層資料表結構衝突
             this.globalShippingCost = data.details.shipping_cost || 0;
             this.globalShippingPrice = data.details.shipping_price || 0;
             this.globalShippingNote = data.details.shipping_note || ""; 
@@ -1229,11 +1257,11 @@
 
           let totalProductionQty = 0;
           if (this.allCalculations && this.allCalculations.length > 0) {
-            this.allCalculations.forEach(calc => {
-              let asmQty = Number(calc.result?.quantity || 1000);
-              let asmYield = Number(primaryYieldRate) || 100;
-              totalProductionQty += Math.ceil(asmQty / (asmYield / 100));
-            });
+          this.allCalculations.forEach((calc, index) => {
+            let asmQty = Number(this.assemblies[index].quantity || 0); 
+            let asmYield = Number(primaryYieldRate) || 100;
+            totalProductionQty += Math.ceil(asmQty / (asmYield / 100));
+          });
           } else {
             let fallbackDelivery = this.assemblies.reduce((sum, a) => sum + (Number(a.quantity)||0), 0);
             totalProductionQty = Math.ceil(fallbackDelivery / (primaryYieldRate / 100));
@@ -1248,14 +1276,13 @@
             
             details: { 
               profit_margin: this.profitMargin,
-              print_profit_margin: this.printProfitMargin, // 新增這行 
+              print_profit_margin: this.printProfitMargin, 
               profit_margin_yield: primaryYieldRate, 
               quote_customer: this.quoteCustomer, 
               global_product_name: this.globalProductName || (this.assemblies[0] ? this.assemblies[0].name : '印刷包裝盒'), 
               global_finished_size: this.globalFinishedSize, 
               global_sales_rep: this.globalSalesRep,
               
-              // 🌟 運費統一收合進 details JSON，保證不破壞原資料表結構
               shipping_cost: Number(this.globalShippingCost) || 0,   
               shipping_price: Number(this.globalShippingPrice) || 0, 
               shipping_note: this.globalShippingNote || "",
@@ -1265,12 +1292,11 @@
             }
           };
 
-          // 🌟 正確攔截 Supabase 的寫入錯誤
           const { error } = await supabaseClient.from('estimates').upsert(payload); 
           
           if (error) {
             alert("⚠️ 雲端寫入失敗，請檢查：" + error.message);
-            return; // 寫入失敗強制中斷，不執行畫面清空
+            return;
           }
 
           alert(`✅ 報價與製造配料資料已成功存入雲端！\n單號: ${this.estimateNo}\n[交貨量]: ${payload.quantity} / [投產量]: ${payload.production_qty}`);
@@ -1355,71 +1381,51 @@
         },
         formatMoney(num) { return Number((num||0).toFixed(2)).toLocaleString(); },
         formatMoneyInt(num) { return Math.round(Number(num||0)).toLocaleString(); },
+        
+        // 🌟 升級為原生向量 PDF 列印 (報價單直式)
         handleExportPDFQuote() {
-          if (!window.html2pdf) return alert('PDF 模組準備中...');
           this.renderBarcodes();
           setTimeout(() => {
-            const element = document.getElementById('quote-report-content');
-            const opt = { 
-              margin: 0, 
-              filename: `報價單_${this.estimateNo}.pdf`, 
-              image: { type: 'jpeg', quality: 1.0 }, 
-              html2canvas: { scale: 2, useCORS: true }, 
-              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
-            };
-            window.html2pdf().set(opt).from(element).toPdf().get('pdf').then((pdf) => {
-              const totalPages = pdf.internal.getNumberOfPages();
-              for (let i = 1; i <= totalPages; i++) {
-                pdf.setPage(i);
-                pdf.setFontSize(9);
-                pdf.setTextColor(150);
-                // 在每一頁的最底部加上估價單號與頁碼
-                pdf.text(`Estimate No: ${this.estimateNo}  |  Page ${i} of ${totalPages}`, pdf.internal.pageSize.getWidth() / 2, pdf.internal.pageSize.getHeight() - 8, { align: 'center' });
-              }
-            }).save();
+            const originalTitle = document.title;
+            const custName = this.quoteCustomer ? this.quoteCustomer.customer_name : '未指定客戶';
+            document.title = `仕罡估價單_${this.estimateNo}_${custName}`;
+
+            // 動態載入 A4 直式與邊距設定
+            const style = document.createElement('style');
+            style.innerHTML = `@page { size: A4 portrait; margin: 10mm; }`;
+            document.head.appendChild(style);
+
+            // 呼叫原生列印視窗產生 100% 向量 PDF
+            window.print();
+
+            // 恢復設定
+            document.head.removeChild(style);
+            document.title = originalTitle;
           }, 300);
         },
+
+        // 🌟 升級為原生向量 PDF 列印 (估算表橫式)
         handleExportPDFSummary() {
-          if (!window.html2pdf) return alert('PDF 模組準備中...');
           this.renderBarcodes();
           setTimeout(() => {
-            const element = document.getElementById('summary-report-content');
-            window.html2pdf().set({
-              margin: [10, 10, 15, 10], // 確保下方預留 15mm 空間給頁碼
-              filename: `毛利估算表_${this.estimateNo}.pdf`,
-              image: { type: 'jpeg', quality: 0.98 },
-              html2canvas: { scale: 2, useCORS: true },
-              // 🌟 設定 1：改為橫式 (landscape)
-              // 🌟 設定 2：啟動 CSS pagebreak 引擎，搭配 HTML 端的 print-avoid-break 防止資料被切半
-              jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-              pagebreak: { mode: ['css', 'legacy'] } 
-            }).from(element).toPdf().get('pdf').then((pdf) => {
-              const totalPages = pdf.internal.getNumberOfPages();
-              for (let i = 1; i <= totalPages; i++) {
-                pdf.setPage(i);
-                pdf.setFontSize(10);
-                pdf.setTextColor(80); // 加深字體顏色避免太淡被忽略
-                // 🌟 設定 3：精準下錨在紙張最底端向上 8mm 處
-                pdf.text(`Estimate No: ${this.estimateNo}  |  Page ${i} of ${totalPages}`, pdf.internal.pageSize.getWidth() / 2, pdf.internal.pageSize.getHeight() - 8, { align: 'center' });
-              }
-            }).save();
+            const originalTitle = document.title;
+            const custName = this.quoteCustomer ? this.quoteCustomer.customer_name : '未指定客戶';
+            document.title = `毛利估算表_${this.estimateNo}_${custName}`;
+
+            // 動態載入 A4 橫式與邊距設定
+            const style = document.createElement('style');
+            style.innerHTML = `@page { size: A4 landscape; margin: 10mm; }`;
+            document.head.appendChild(style);
+
+            // 呼叫原生列印視窗產生 100% 向量 PDF
+            window.print();
+
+            // 恢復設定
+            document.head.removeChild(style);
+            document.title = originalTitle;
           }, 300);
         },
-        handleExportPDFSummary() {
-          if (!window.html2pdf) return alert('PDF 模組準備中...');
-          this.renderBarcodes();
-          setTimeout(() => {
-            const element = document.getElementById('summary-report-content');
-            window.html2pdf().set({
-              // 🌟 將原本的 margin: 10 改為陣列 [上, 左, 下, 右]，縮小上方留白
-              margin: [3, 10, 10, 10], 
-              filename: `毛利估算表_${this.estimateNo}.pdf`,
-              image: { type: 'jpeg', quality: 0.98 },
-              html2canvas: { scale: 2, useCORS: true },
-              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            }).from(element).save();
-          }, 300);
-        },
+
         triggerMaterialSearchForPrint() {
           this.materialSearchQuery = "印刷加工";
           this.isMaterialDropdownOpen = true;
