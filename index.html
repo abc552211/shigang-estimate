@@ -9,6 +9,7 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  /*20260709 1003*/
   <script>
     tailwind.config = {
       theme: {
@@ -454,8 +455,11 @@
               <label v-if="!settings.company_logo" class="cursor-pointer px-3 py-1.5 bg-moLight text-moText border border-moBorder font-bold rounded hover:bg-gray-200 whitespace-nowrap">公司Logo
                 <input type="file" class="hidden" accept="image/*" @change="handleLogoUpload">
               </label>
-              <button @click="saveEstimateToDB" class="px-4 py-1.5 bg-moAccent text-white font-bold rounded hover:bg-moAccentHover whitespace-nowrap">儲存資料</button>
-              <button @click="handleExportPDFQuote" class="px-4 py-1.5 bg-moText text-white font-bold rounded hover:bg-gray-700 whitespace-nowrap">匯出向量 PDF</button>
+              
+              <button v-if="isEditingOldOrder" @click="deleteEstimateFromDB" class="px-4 py-1.5 bg-red-600 text-white font-bold rounded hover:bg-red-700 whitespace-nowrap shadow-sm transition-colors">🗑️ 作廢刪單</button>
+              
+              <button @click="saveEstimateToDB" class="px-4 py-1.5 bg-moAccent text-white font-bold rounded hover:bg-moAccentHover whitespace-nowrap shadow-sm transition-colors">儲存資料</button>
+              <button @click="handleExportPDFQuote" class="px-4 py-1.5 bg-moText text-white font-bold rounded hover:bg-gray-700 whitespace-nowrap shadow-sm transition-colors">匯出向量 PDF</button>
             </div>
           </div>
           
@@ -891,7 +895,7 @@
             showPaperSpec: true   
           },
 
-          estimateNo: "讀取中...", currentDateTime: new Date().toLocaleString('zh-TW'), searchOrderNo: "",
+          estimateNo: "讀取中...", currentDateTime: new Date().toLocaleString('zh-TW'), searchOrderNo: "",isEditingOldOrder: false, // 判斷當前是否為已存檔的舊單
           assemblies: [createDefaultAssembly(1)], activeTab: 0, editingTabIndex: -1, profitMargin: 40, printProfitMargin: 40 
         }
       },
@@ -1194,6 +1198,7 @@
 
         initNewOrder() { 
           if(!confirm("確定開新單？未儲存資料將會遺失。")) return; 
+          this.isEditingOldOrder = false; // 重置旗標
           this.assemblies = [createDefaultAssembly(1)]; 
           this.activeTab = 0; 
           this.profitMargin = 40;
@@ -1226,8 +1231,10 @@
             alert(`⚠️ 資料庫讀取異常: ${error.message}`);
             return;
           }
+          
 
           if (data) {
+            this.isEditingOldOrder = true; // 啟動旗標，顯示刪除按鈕
             this.estimateNo = data.estimate_no; 
             this.profitMargin = data.details.profit_margin || 40;
             this.printProfitMargin = data.details.print_profit_margin || 40; 
@@ -1246,6 +1253,28 @@
             alert(`✅ 成功調閱: ${this.estimateNo}`);
           } else {
             alert(`找不到單號 ${qNo}`);
+          }
+        },
+        // 🚀 3. 新增刪除單據引擎
+        async deleteEstimateFromDB() {
+          if(!confirm(`⚠️ 嚴重警告：\n確定要作廢並永久刪除估價單 【${this.estimateNo}】 嗎？\n此動作執行後將無法復原！`)) return;
+          
+          try {
+            const { error } = await supabaseClient.from('estimates').delete().eq('estimate_no', this.estimateNo);
+            if (error) throw error;
+            
+            alert(`🗑️ 估價單 ${this.estimateNo} 已成功作廢刪除！`);
+            
+            // 刪除成功後，強制系統重置為一張全新的空單
+            this.isEditingOldOrder = false;
+            this.searchOrderNo = "";
+            this.assemblies = [createDefaultAssembly(1)]; 
+            this.activeTab = 0; 
+            this.quoteCustomer = null; 
+            this.generateEstimateNo(); // 重新取號
+            
+          } catch (err) {
+            alert("刪除失敗：" + err.message);
           }
         },
 
