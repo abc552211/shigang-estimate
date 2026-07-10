@@ -374,7 +374,7 @@
                   <div class="flex items-center space-x-2 min-w-0 flex-1">
                     <span class="text-[10px] font-mono font-bold text-indigo-900 bg-indigo-50 border border-indigo-100 px-1 rounded flex-shrink-0">{{ mat.material_id }}</span>
                     <p class="text-xs font-black text-moText truncate" :title="mat.material_name">
-                      [{{ String(mat.supplier_name || '我司').substring(0, 2) }}|{{ mat.material_name }}]
+                      [{{ String(mat.supplier_name || '我司').substring(0, 2) }}|{{ mat.material_name }}] {{ mat.material_spec }}
                     </p>
                   </div>
                   <div class="w-14 bg-white flex items-center justify-center overflow-hidden flex-shrink-0 border rounded px-1 hidden sm:flex" data-html2canvas-ignore="true">
