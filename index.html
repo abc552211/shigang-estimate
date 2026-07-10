@@ -133,7 +133,7 @@
                       <div class="text-[11px] font-bold text-indigo-800 mb-0.5 font-mono tracking-wider">{{ mat.material_id }}</div>
                       <div class="text-xs text-slate-800 font-bold">
                         <span class="text-moAccent">[{{ String(mat.supplier_name || '未知').substring(0, 2) }}|{{ mat.material_name }}]</span> 
-                        <span class="text-gray-400 font-normal text-[11px]">${{ mat.material_spec || '' }}</span>
+                        <span class="text-gray-400 font-normal text-[11px]"> {{ mat.material_spec || '' }}</span>
                       </div>
                     </div>
                     <div class="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-1 rounded-md shadow-2xs whitespace-nowrap">
